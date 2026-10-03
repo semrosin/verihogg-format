@@ -16,6 +16,7 @@
 - [Example](#example)
 - [Quick start](#quick-start)
 - [Command-line options](#command-line-options)
+- [Configuration file](#configuration-file)
 - [Usage](#usage)
   - [Docker (recommended)](#docker-recommended)
   - [Build from source with Nix](#build-from-source-with-nix)
@@ -31,8 +32,9 @@
 
 **Implemented**
 
-- Basic indentation with a fixed number of spaces (configurability is planned)
+- Basic indentation with a configurable number of spaces
 - Tabular alignment of port lists and declarations
+- YAML configuration file support (`.verihogg-format.yaml`, validated against a JSON Schema)
 - Docker image published to GitHub Container Registry
 - Nix build for reproducible environments
 
@@ -40,7 +42,6 @@
 
 - Automatic line wrapping (breaking long lines to fit the column limit)
 - Formatting of comments
-- Configuration file support
 - Predefined formatting styles (e.g. SCR1, UVM, custom profiles)
 
 ---
@@ -112,32 +113,63 @@ docker run --rm -v "$(pwd)":/data -w /data \
 
 ## Command-line options
 
-### Currently implemented
-
-| Option          | Description                                           |
-| --------------- | ----------------------------------------------------- |
-| `-n, --inplace` | Overwrite source files instead of printing to stdout. |
-| `-h, --help`    | Show help and exit.                                   |
-
-### Planned options (not yet implemented)
-
-The following options are part of the roadmap and will be added in future releases.
-
 | Option                              | Description                                                    |
 | ----------------------------------- | -------------------------------------------------------------- |
+| `-n, --inplace`                     | Overwrite source files instead of printing to stdout.          |
 | `-c, --column_limit N`              | Maximum line length (default: `100`).                          |
 | `-i, --indentation_spaces N`        | Spaces per indent level (default: `2`).                        |
 | `-w, --wrap_spaces N`               | Extra indent for wrapped lines (default: `4`).                 |
 | `-b, --line_break_penalty N`        | Penalty for breaking a line (default: `2`).                    |
 | `-p, --over_column_limit_penalty N` | Penalty per character over the column limit (default: `100`).  |
 | `-t, --line_terminator MODE`        | Line ending style: `auto` \| `lf` \| `crlf` (default: `auto`). |
+| `--config PATH`                     | Use this configuration file instead of searching for one.      |
+| `-h, --help`                        | Show help and exit.                                            |
+
+Command-line options override values from the [configuration file](#configuration-file).
 
 ### Exit codes
 
 | Code | Meaning                                       |
 | ---- | --------------------------------------------- |
 | `0`  | Formatting complete, no errors.               |
-| `1`  | Invalid command-line argument or parse error. |
+| `1`  | Invalid command-line argument, configuration file error or parse error. |
+
+---
+
+## Configuration file
+
+Options can be stored in a YAML configuration file named `.verihogg-format.yaml`
+(or `.verihogg-format.yml`). The file is searched upwards starting from the
+directory of each input file; for stdin, the search starts in the current
+working directory. `--config PATH` loads a specific file instead of searching.
+
+```yaml
+version: "1.0"
+column_limit: 120
+indentation_spaces: 4
+line_terminator: lf
+port_declarations_alignment: flush-left
+```
+
+`version` is required and must be `"1.0"`; all other keys are optional. Values
+are resolved in this order (later wins):
+
+1. built-in defaults,
+2. the selected `style` profile (`default`, `lowrisc` or `scr1`; the latter two
+   currently match `default`),
+3. values from the configuration file,
+4. command-line options.
+
+The file is validated against
+[`schemas/verihogg-format.schema.json`](schemas/verihogg-format.schema.json):
+unknown keys and invalid values are rejected with a `path:line:column` message.
+Editors can pick up the same schema when the file references it:
+
+```yaml
+$schema: "https://raw.githubusercontent.com/verihogg/verihogg-format/main/schemas/verihogg-format.schema.json"
+version: "1.0"
+column_limit: 120
+```
 
 ---
 
@@ -222,6 +254,9 @@ If you are not using Nix, install the following dependencies manually:
 - C++20-compatible compiler
 - CMake 3.20+
 - [slang](https://github.com/MikePopoloski/slang) — SystemVerilog parser
+- [CLI11](https://github.com/CLIUtils/CLI11) — command-line parser
+- [yaml-cpp](https://github.com/jbeder/yaml-cpp) — YAML parser (configuration files)
+- [valijson](https://github.com/tristanpenman/valijson) — JSON Schema validation (configuration files)
 - [Microsoft GSL](https://github.com/microsoft/GSL) — Guidelines Support Library
 - Google Test (optional, required for tests)
 
@@ -243,21 +278,25 @@ The binary is placed at `build/bin/verihogg-format`.
 ├── formatter/
 │   ├── include/            # Public headers
 │   │   ├── cli/            # CLI argument binding (format_args.h)
+│   │   ├── config/         # Configuration file loading (config_loader.h)
 │   │   ├── data/           # Core data structures (format_style.h, unwrapped_line.h, format_token.h, lex_context.h)
 │   │   ├── pipeline/       # Pipeline stage interfaces (tree_unwrapper.h, token_annotator.h,
 │   │   │                   #   tabular_aligner.h, line_wrap_searcher.h, printer.h, runner.h)
 │   │   └── formatter.h     # Top-level formatter interface
 │   ├── src/
+│   │   ├── config/         # Configuration file loading and validation
 │   │   ├── data/           # Data structure implementations
 │   │   ├── pipeline/       # Pipeline stage implementations
 │   │   ├── formatter.cpp
 │   │   └── main.cpp
 │   └── tests/              # GTest-based unit and integration tests
+│       ├── config_loader_test.cpp
 │       ├── format_args_test.cpp
 │       ├── printer_test.cpp
 │       ├── scr1_tests.cpp
 │       ├── tabular_align_test.cpp
 │       └── test_tree_unwrapper.cpp
+├── schemas/                # JSON Schema for the configuration file
 ├── scripts/
 │   ├── check-format.sh
 │   ├── format.sh
