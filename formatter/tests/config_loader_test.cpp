@@ -82,6 +82,9 @@ class ConfigLoaderTest : public ::testing::Test {
     return path;
   }
 
+  [[nodiscard]] auto dir() const -> const fs::path& { return dir_; }
+
+ private:
   fs::path dir_;
 };
 
@@ -256,14 +259,15 @@ TEST_F(ConfigLoaderTest, NearestConfigWins) {
 
   ConfigResolver resolver(std::nullopt);
 
-  EXPECT_EQ(resolver.resolve(dir_ / "root/sub/deep/file.sv").column_limit, 80U);
-  EXPECT_EQ(resolver.resolve(dir_ / "root/file.sv").column_limit, 120U);
+  EXPECT_EQ(resolver.resolve(dir() / "root/sub/deep/file.sv").column_limit,
+            80U);
+  EXPECT_EQ(resolver.resolve(dir() / "root/file.sv").column_limit, 120U);
 }
 
 TEST_F(ConfigLoaderTest, MissingConfigKeepsDefaults) {
   ConfigResolver resolver(std::nullopt);
 
-  EXPECT_EQ(resolver.resolve(dir_ / "nowhere/file.sv").column_limit, 100U);
+  EXPECT_EQ(resolver.resolve(dir() / "nowhere/file.sv").column_limit, 100U);
 }
 
 TEST_F(ConfigLoaderTest, ExplicitConfigBeatsSearch) {
@@ -274,11 +278,11 @@ TEST_F(ConfigLoaderTest, ExplicitConfigBeatsSearch) {
 
   ConfigResolver resolver(explicit_config);
 
-  EXPECT_EQ(resolver.resolve(dir_ / "root/file.sv").column_limit, 90U);
+  EXPECT_EQ(resolver.resolve(dir() / "root/file.sv").column_limit, 90U);
 }
 
 TEST_F(ConfigLoaderTest, MissingExplicitConfigFails) {
-  EXPECT_THROW(ConfigResolver(dir_ / "missing.yaml"), std::runtime_error);
+  EXPECT_THROW(ConfigResolver(dir() / "missing.yaml"), std::runtime_error);
 }
 
 TEST_F(ConfigLoaderTest, YmlExtensionIsSupported) {
@@ -287,14 +291,14 @@ TEST_F(ConfigLoaderTest, YmlExtensionIsSupported) {
 
   ConfigResolver resolver(std::nullopt);
 
-  EXPECT_EQ(resolver.resolve(dir_ / "root/file.sv").column_limit, 110U);
+  EXPECT_EQ(resolver.resolve(dir() / "root/file.sv").column_limit, 110U);
 }
 
 TEST_F(ConfigLoaderTest, ResolveForStdinUsesWorkingDirectory) {
   writeFile(".verihogg-format.yaml", "version: \"1.0\"\ncolumn_limit: 111\n");
 
   const fs::path old_cwd = fs::current_path();
-  fs::current_path(dir_);
+  fs::current_path(dir());
   FormatStyle style;
   try {
     ConfigResolver resolver(std::nullopt);

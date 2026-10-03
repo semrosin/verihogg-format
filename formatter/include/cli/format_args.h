@@ -27,7 +27,7 @@ class FormatArgsBinder {
   // that were not passed on the command line keep the value from base.
   void applyStyleOverrides(FormatStyle& style) const;
 
-  auto buildRunConfig() const -> RunConfig;
+  [[nodiscard]] auto buildRunConfig() const -> RunConfig;
 
   // Convenience wrapper: applies CLI overrides to base and builds RunConfig.
   auto buildStyle(const FormatStyle& base = FormatStyle::defaults())
