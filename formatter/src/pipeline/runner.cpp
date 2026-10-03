@@ -34,8 +34,8 @@ auto printWarning(std::ostream& os, std::string_view path,
 
 }  // namespace
 auto runFormatter(gsl::span<const std::filesystem::path> files,
-                  const format::FormatStyle& style,
-                  const format::RunConfig& run, Streams streams) -> int {
+                  const StyleProvider& style, const RunConfig& run,
+                  Streams streams) -> int {
   int warnings = 0;
   for (const auto& path : files) {
     LexContext ctx;
@@ -46,7 +46,7 @@ auto runFormatter(gsl::span<const std::filesystem::path> files,
       continue;
     }
 
-    auto result = format::format(tokens, style);
+    auto result = format::format(tokens, style(path));
     for (const auto& warning : result.warnings) {
       printWarning(*streams.err, path.string(), warning);
       ++warnings;

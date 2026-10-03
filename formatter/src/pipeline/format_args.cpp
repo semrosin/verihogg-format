@@ -25,6 +25,7 @@ Formatting options:
   -b, --line_break_penalty <N>         Penalty for each line break (default: 2)
   -p, --over_column_limit_penalty <N>  Penalty per character over limit (default: 100)
   -t, --line_terminator <mode>         auto | lf | crlf (default: auto)
+      --config <path>                  Load configuration from a YAML file
   -n, --inplace                        Overwrite source files instead of stdout
 )");
 }
@@ -58,40 +59,49 @@ FormatArgsBinder::FormatArgsBinder() {
   app_.add_flag("-n,--inplace", inplace_,
                 "Overwrite the source files instead of outputting to stdout");
 
+  app_.add_option("--config", config_path_,
+                  "Load configuration from a YAML file");
+
   // Positional "files". Tokens not starting with '-' are placed here by
   // CLI11 itself — before attempts to match them with options, so there's
   // no need to manually classify "file or unknown flag".
   app_.add_option("files", files_, "Source files to format")->type_name("FILE");
 }
 
-auto FormatArgsBinder::buildStyle() -> std::pair<FormatStyle, RunConfig> {
-  FormatStyle s = FormatStyle::defaults();
-
+void FormatArgsBinder::applyStyleOverrides(FormatStyle& style) const {
   if (column_limit_.has_value()) {
-    s.column_limit = *column_limit_;
+    style.column_limit = *column_limit_;
   }
   if (indentation_spaces_.has_value()) {
-    s.indentation_spaces = *indentation_spaces_;
+    style.indentation_spaces = *indentation_spaces_;
   }
   if (wrap_spaces_.has_value()) {
-    s.wrap_spaces = *wrap_spaces_;
+    style.wrap_spaces = *wrap_spaces_;
   }
   if (line_break_penalty_.has_value()) {
-    s.line_break_penalty = *line_break_penalty_;
+    style.line_break_penalty = *line_break_penalty_;
   }
   if (over_column_limit_penalty_.has_value()) {
-    s.over_column_limit_penalty = *over_column_limit_penalty_;
+    style.over_column_limit_penalty = *over_column_limit_penalty_;
   }
   if (line_terminator_.has_value()) {
-    s.line_terminator = lineTerminatorFromString(*line_terminator_);
+    style.line_terminator = lineTerminatorFromString(*line_terminator_);
   }
+}
 
+auto FormatArgsBinder::buildRunConfig() const -> RunConfig {
   RunConfig run;
   if (inplace_.has_value()) {
     run.inplace = *inplace_;
   }
+  return run;
+}
 
-  return {s, run};
+auto FormatArgsBinder::buildStyle(const FormatStyle& base)
+    -> std::pair<FormatStyle, RunConfig> {
+  FormatStyle style = base;
+  applyStyleOverrides(style);
+  return {style, buildRunConfig()};
 }
 
 void FormatArgsBinder::parse(int argc, char** argv) { app_.parse(argc, argv); }

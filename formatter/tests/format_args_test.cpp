@@ -35,13 +35,15 @@ class FormatArgsTest : public ::testing::Test {
     }
   }
 
-  [[nodiscard]] auto buildStyle(const std::vector<const char*>& args = {})
+  [[nodiscard]] auto buildStyle(
+      const std::vector<const char*>& args = {},
+      const format::FormatStyle& base = format::FormatStyle::defaults())
       -> std::pair<format::FormatStyle, format::RunConfig> {
     EXPECT_TRUE(parse(args));
     if (!binder.has_value()) {
       throw std::runtime_error("binder is not initialized");
     }
-    return binder->buildStyle();
+    return binder->buildStyle(base);
   }
 
   [[nodiscard]] auto getBinder() -> format::FormatArgsBinder& {
@@ -207,6 +209,48 @@ TEST_F(FormatArgsTest, NonNumericColumnLimitRejectedByParser) {
 
 TEST_F(FormatArgsTest, NegativeColumnLimitRejectedByParser) {
   EXPECT_FALSE(parse({"--column_limit", "-1"}));
+}
+
+// ---------------------------------------------------------------------------
+// --config and merging CLI options over a base style
+// ---------------------------------------------------------------------------
+
+TEST_F(FormatArgsTest, ConfigPathIsCollected) {
+  (void)buildStyle({"--config", "my-config.yaml"});
+
+  ASSERT_TRUE(getBinder().configPath().has_value());
+  EXPECT_EQ(*getBinder().configPath(), "my-config.yaml");
+}
+
+TEST_F(FormatArgsTest, NoConfigPathByDefault) {
+  (void)buildStyle();
+
+  EXPECT_FALSE(getBinder().configPath().has_value());
+}
+
+TEST_F(FormatArgsTest, CliOverridesBaseStyle) {
+  format::FormatStyle base = format::FormatStyle::defaults();
+  base.column_limit = 120;
+  base.wrap_spaces = 8;
+  base.port_declarations_alignment = format::AlignmentPolicy::kFlushLeft;
+
+  auto [style, run] = buildStyle({"--column_limit", "140"}, base);
+
+  EXPECT_EQ(style.column_limit, 140U);
+  EXPECT_EQ(style.wrap_spaces, 8U);
+  EXPECT_EQ(style.port_declarations_alignment,
+            format::AlignmentPolicy::kFlushLeft);
+  EXPECT_EQ(style.indentation_spaces, format::defaults::kIndentationSpaces);
+  EXPECT_FALSE(run.inplace);
+}
+
+TEST_F(FormatArgsTest, CliLineTerminatorOverridesBaseStyle) {
+  format::FormatStyle base = format::FormatStyle::defaults();
+  base.line_terminator = format::LineTerminator::kCrLf;
+
+  auto [style, run] = buildStyle({"--line_terminator", "lf"}, base);
+
+  EXPECT_EQ(style.line_terminator, format::LineTerminator::kLf);
 }
 
 }  // namespace

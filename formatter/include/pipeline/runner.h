@@ -1,5 +1,6 @@
 #pragma once
 #include <filesystem>
+#include <functional>
 #include <gsl/span>
 #include <ostream>
 
@@ -12,7 +13,10 @@ struct Streams {
   std::ostream* err;
 };
 
+// Resolves the style for a source file. Called once per file.
+using StyleProvider = std::function<FormatStyle(const std::filesystem::path&)>;
+
 auto runFormatter(gsl::span<const std::filesystem::path> files,
-                  const format::FormatStyle& style,
-                  const format::RunConfig& run, Streams streams) -> int;
+                  const StyleProvider& style, const RunConfig& run,
+                  Streams streams) -> int;
 }  // namespace format
