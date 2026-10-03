@@ -20,6 +20,27 @@ find_package(Microsoft.GSL CONFIG REQUIRED)
 
 find_package(CLI11 CONFIG REQUIRED)
 
+find_package(yaml-cpp CONFIG REQUIRED)
+find_package(valijson CONFIG REQUIRED)
+
+# Embed the configuration JSON schema into the binary so that runtime
+# validation does not depend on files installed alongside the executable.
+set(VHG_SCHEMA_FILE
+  ${CMAKE_CURRENT_SOURCE_DIR}/schemas/verihogg-format.schema.json)
+set(VHG_GENERATED_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated)
+file(MAKE_DIRECTORY ${VHG_GENERATED_DIR}/config)
+file(READ ${VHG_SCHEMA_FILE} VHG_SCHEMA_JSON)
+file(WRITE ${VHG_GENERATED_DIR}/config/schema_embedded.inc
+  "R\"VHG(\n${VHG_SCHEMA_JSON}\n)VHG\"\n")
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+  ${VHG_SCHEMA_FILE})
+
+if(TARGET ValiJSON::valijson)
+  set(VHG_VALIJSON_TARGET ValiJSON::valijson)
+else()
+  set(VHG_VALIJSON_TARGET valijson)
+endif()
+
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
@@ -29,8 +50,9 @@ add_executable(${PROJECT_NAME} ${SRC})
 target_include_directories(${PROJECT_NAME}
   PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/formatter/include>
+  $<BUILD_INTERFACE:${VHG_GENERATED_DIR}>
 )
-target_link_libraries(${PROJECT_NAME} PRIVATE slang::slang Microsoft.GSL::GSL CLI11::CLI11)
+target_link_libraries(${PROJECT_NAME} PRIVATE slang::slang Microsoft.GSL::GSL CLI11::CLI11 yaml-cpp::yaml-cpp ${VHG_VALIJSON_TARGET})
 
 if(MSVC)
   target_compile_options(${PROJECT_NAME} PRIVATE /W4 /bigobj)
@@ -66,8 +88,10 @@ if(GTest_FOUND)
 
   add_library(verihogg-format-lib STATIC ${LIB_SRC})
   target_include_directories(verihogg-format-lib PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/formatter/include>)
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/formatter/include>
+    $<BUILD_INTERFACE:${VHG_GENERATED_DIR}>)
   target_link_libraries(verihogg-format-lib PUBLIC slang::slang CLI11::CLI11)
+  target_link_libraries(verihogg-format-lib PRIVATE yaml-cpp::yaml-cpp ${VHG_VALIJSON_TARGET})
 
   file(GLOB_RECURSE TEST_SRC CONFIGURE_DEPENDS formatter/tests/*.cpp)
 
