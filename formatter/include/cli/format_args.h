@@ -23,7 +23,20 @@ class FormatArgsBinder {
   // (e.g., --column_limit=abc) throws CLI::ParseError.
   void parse(int argc, char** argv);
 
-  auto buildStyle() -> std::pair<FormatStyle, RunConfig>;
+  // Applies explicitly set command-line options on top of a style. Options
+  // that were not passed on the command line keep the value from base.
+  void applyStyleOverrides(FormatStyle& style) const;
+
+  auto buildRunConfig() const -> RunConfig;
+
+  // Convenience wrapper: applies CLI overrides to base and builds RunConfig.
+  auto buildStyle(const FormatStyle& base = FormatStyle::defaults())
+      -> std::pair<FormatStyle, RunConfig>;
+
+  // Path passed via --config, if any.
+  [[nodiscard]] auto configPath() const -> const std::optional<std::string>& {
+    return config_path_;
+  }
 
   // Anything that does not look like a flag is collected here by CLI11 itself.
   [[nodiscard]] auto files() const -> const std::vector<std::string>& {
@@ -46,6 +59,7 @@ class FormatArgsBinder {
   std::optional<uint32_t> over_column_limit_penalty_;
   std::optional<std::string> line_terminator_;
   std::optional<bool> inplace_;
+  std::optional<std::string> config_path_;
 };
 
 }  // namespace format
