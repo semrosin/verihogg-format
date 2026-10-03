@@ -2,10 +2,15 @@
 
 #include <cassert>
 #include <exception>
+#include <filesystem>
 #include <iostream>
+#include <iterator>
+#include <optional>
+#include <string>
 #include <string_view>
 
 #include "cli/format_args.h"
+#include "config/config_loader.h"
 #include "data/lex_context.h"
 #include "formatter.h"
 #include "pipeline/runner.h"
@@ -46,7 +51,18 @@ auto main(int argc, char** argv) -> int {
       driver.sourceLoader.addFiles(file);
     }
 
-    auto [style, run] = binder.buildStyle();
+    std::optional<std::filesystem::path> config_path;
+    if (binder.configPath().has_value()) {
+      config_path = *binder.configPath();
+    }
+    format::config::ConfigResolver resolver(config_path);
+    const format::RunConfig run = binder.buildRunConfig();
+
+    auto styleFor = [&binder, &resolver](const std::filesystem::path& file) {
+      format::FormatStyle style = resolver.resolve(file);
+      binder.applyStyleOverrides(style);
+      return style;
+    };
 
     const auto& files = driver.sourceLoader.getFilePaths();
 
@@ -55,8 +71,15 @@ auto main(int argc, char** argv) -> int {
     }
 
     if (files.empty()) {
+      format::FormatStyle style = resolver.resolveForStdin();
+      binder.applyStyleOverrides(style);
+      std::string source{std::istreambuf_iterator<char>(std::cin),
+                         std::istreambuf_iterator<char>()};
+      if (source.empty()) {
+        return 0;
+      }
       LexContext ctx;
-      auto tokens = ctx.lex_file("<stdin>");
+      auto tokens = ctx.lex_string(source);
       auto result = format::format(tokens, style);
       for (const auto& warning : result.warnings) {
         printWarning(std::cerr, "<stdin>", warning);
@@ -64,7 +87,13 @@ auto main(int argc, char** argv) -> int {
       std::cout << result.formatted_text;
       return 0;
     }
-    runFormatter(files, style, run, {.out = &std::cout, .err = &std::cerr});
+
+    // Resolve all styles before formatting anything so that a broken config
+    // cannot leave a partially formatted run behind.
+    for (const auto& file : files) {
+      (void)styleFor(file);
+    }
+    runFormatter(files, styleFor, run, {.out = &std::cout, .err = &std::cerr});
     return 0;
   } catch (const std::exception& e) {
     std::cerr << "Error: " << e.what() << "\n";
