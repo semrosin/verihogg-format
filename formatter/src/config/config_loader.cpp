@@ -159,7 +159,13 @@ auto validateDocument(const YAML::Node& doc, const fs::path& path) -> void {
       continue;
     }
     if (const auto key = unknownKeyFromMessage(error.description)) {
-      const YAML::Node node = doc[*key];
+      YAML::Node node;
+      for (const auto& entry : doc) {
+        if (entry.first.as<std::string>() == *key) {
+          node = entry.first;
+          break;
+        }
+      }
       messages.push_back(errorAt(path, node ? node.Mark() : doc.Mark(),
                                  "unknown option '" + *key + "'"));
       continue;
