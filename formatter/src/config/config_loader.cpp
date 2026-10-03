@@ -155,7 +155,7 @@ auto validateDocument(const YAML::Node& doc, const fs::path& path) -> void {
   while (results.popError(error)) {
     // Wrapper errors add no location of their own: the leaf error below
     // already describes the actual problem.
-    if (error.description.rfind("Failed to validate against schema", 0) == 0) {
+    if (error.description.starts_with("Failed to validate against schema")) {
       continue;
     }
     if (const auto key = unknownKeyFromMessage(error.description)) {
@@ -184,7 +184,7 @@ auto validateDocument(const YAML::Node& doc, const fs::path& path) -> void {
 
 auto applyDocument(const YAML::Node& doc, FormatStyle& style) -> void {
   for (const auto& entry : doc) {
-    const std::string key = entry.first.as<std::string>();
+    const auto key = entry.first.as<std::string>();
     const YAML::Node& value = entry.second;
     if (key == "version" || key == "style" || key == "$schema") {
       continue;

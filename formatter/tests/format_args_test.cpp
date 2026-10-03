@@ -218,8 +218,7 @@ TEST_F(FormatArgsTest, NegativeColumnLimitRejectedByParser) {
 TEST_F(FormatArgsTest, ConfigPathIsCollected) {
   (void)buildStyle({"--config", "my-config.yaml"});
 
-  ASSERT_TRUE(getBinder().configPath().has_value());
-  EXPECT_EQ(*getBinder().configPath(), "my-config.yaml");
+  EXPECT_EQ(getBinder().configPath().value_or("<unset>"), "my-config.yaml");
 }
 
 TEST_F(FormatArgsTest, NoConfigPathByDefault) {
@@ -229,15 +228,18 @@ TEST_F(FormatArgsTest, NoConfigPathByDefault) {
 }
 
 TEST_F(FormatArgsTest, CliOverridesBaseStyle) {
+  constexpr format::ColumnNumber kBaseColumnLimit = 120;
+  constexpr format::IndentLevel kBaseWrapSpaces = 8;
+
   format::FormatStyle base = format::FormatStyle::defaults();
-  base.column_limit = 120;
-  base.wrap_spaces = 8;
+  base.column_limit = kBaseColumnLimit;
+  base.wrap_spaces = kBaseWrapSpaces;
   base.port_declarations_alignment = format::AlignmentPolicy::kFlushLeft;
 
   auto [style, run] = buildStyle({"--column_limit", "140"}, base);
 
   EXPECT_EQ(style.column_limit, 140U);
-  EXPECT_EQ(style.wrap_spaces, 8U);
+  EXPECT_EQ(style.wrap_spaces, kBaseWrapSpaces);
   EXPECT_EQ(style.port_declarations_alignment,
             format::AlignmentPolicy::kFlushLeft);
   EXPECT_EQ(style.indentation_spaces, format::defaults::kIndentationSpaces);

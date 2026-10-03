@@ -55,7 +55,7 @@ TEST(FormatStyleTest, LineTerminatorFromString) {
   EXPECT_EQ(format::lineTerminatorFromString("auto"), LineTerminator::kAuto);
   EXPECT_EQ(format::lineTerminatorFromString("lf"), LineTerminator::kLf);
   EXPECT_EQ(format::lineTerminatorFromString("crlf"), LineTerminator::kCrLf);
-  EXPECT_THROW(format::lineTerminatorFromString("bogus"),
+  EXPECT_THROW((void)format::lineTerminatorFromString("bogus"),
                std::invalid_argument);
 }
 
@@ -68,7 +68,7 @@ TEST(FormatStyleTest, AlignmentPolicyFromString) {
             AlignmentPolicy::kPreserve);
   EXPECT_EQ(format::alignmentPolicyFromString("infer"),
             AlignmentPolicy::kInfer);
-  EXPECT_THROW(format::alignmentPolicyFromString("bogus"),
+  EXPECT_THROW((void)format::alignmentPolicyFromString("bogus"),
                std::invalid_argument);
 }
 
@@ -77,7 +77,7 @@ TEST(FormatStyleTest, IndentationPolicyFromString) {
             IndentationPolicy::kIndent);
   EXPECT_EQ(format::indentationPolicyFromString("wrap"),
             IndentationPolicy::kWrap);
-  EXPECT_THROW(format::indentationPolicyFromString("bogus"),
+  EXPECT_THROW((void)format::indentationPolicyFromString("bogus"),
                std::invalid_argument);
 }
 
@@ -91,7 +91,7 @@ TEST(FormatStyleTest, AlignmentGroupBoundaryFromString) {
   EXPECT_EQ(format::alignmentGroupBoundaryFromString(
                 "blank-lines-and-separator-comments"),
             AlignmentGroupBoundary::kBlankLinesAndSeparatorComments);
-  EXPECT_THROW(format::alignmentGroupBoundaryFromString("bogus"),
+  EXPECT_THROW((void)format::alignmentGroupBoundaryFromString("bogus"),
                std::invalid_argument);
 }
 
