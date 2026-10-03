@@ -1,5 +1,5 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Verihogg SystemVerilog Formatter Configuration",
   "description": "Configuration for the Verihogg SystemVerilog formatter.",
   "type": "object",
@@ -82,103 +82,171 @@
     },
 
     "port_declarations_alignment": {
-      "$ref": "#/$defs/alignmentPolicy",
+      "allOf": [
+        {
+          "$ref": "#/definitions/alignmentPolicy"
+        }
+      ],
       "description": "Alignment of port direction, type, dimensions and name.",
       "default": "infer"
     },
 
     "module_net_variable_alignment": {
-      "$ref": "#/$defs/alignmentPolicy",
+      "allOf": [
+        {
+          "$ref": "#/definitions/alignmentPolicy"
+        }
+      ],
       "description": "Alignment of net and variable declarations inside blocks.",
       "default": "infer"
     },
 
     "assignment_statement_alignment": {
-      "$ref": "#/$defs/alignmentPolicy",
+      "allOf": [
+        {
+          "$ref": "#/definitions/alignmentPolicy"
+        }
+      ],
       "description": "Alignment of assignment statements.",
       "default": "infer"
     },
 
     "formal_parameters_alignment": {
-      "$ref": "#/$defs/alignmentPolicy",
+      "allOf": [
+        {
+          "$ref": "#/definitions/alignmentPolicy"
+        }
+      ],
       "description": "Alignment of formal parameters in module, interface and class headers.",
       "default": "infer"
     },
 
     "named_parameter_alignment": {
-      "$ref": "#/$defs/alignmentPolicy",
+      "allOf": [
+        {
+          "$ref": "#/definitions/alignmentPolicy"
+        }
+      ],
       "description": "Alignment of named parameters in instantiations.",
       "default": "infer"
     },
 
     "named_port_alignment": {
-      "$ref": "#/$defs/alignmentPolicy",
+      "allOf": [
+        {
+          "$ref": "#/definitions/alignmentPolicy"
+        }
+      ],
       "description": "Alignment of named port connections.",
       "default": "infer"
     },
 
     "parameter_declaration_alignment": {
-      "$ref": "#/$defs/alignmentPolicy",
+      "allOf": [
+        {
+          "$ref": "#/definitions/alignmentPolicy"
+        }
+      ],
       "description": "Alignment of parameter and localparam declarations in block bodies.",
       "default": "infer"
     },
 
     "case_items_alignment": {
-      "$ref": "#/$defs/alignmentPolicy",
+      "allOf": [
+        {
+          "$ref": "#/definitions/alignmentPolicy"
+        }
+      ],
       "description": "Alignment of case item labels.",
       "default": "infer"
     },
 
     "enum_assignment_statement_alignment": {
-      "$ref": "#/$defs/alignmentPolicy",
+      "allOf": [
+        {
+          "$ref": "#/definitions/alignmentPolicy"
+        }
+      ],
       "description": "Alignment of enum elements with assignments.",
       "default": "infer"
     },
 
     "struct_union_members_alignment": {
-      "$ref": "#/$defs/alignmentPolicy",
+      "allOf": [
+        {
+          "$ref": "#/definitions/alignmentPolicy"
+        }
+      ],
       "description": "Alignment of struct and union members.",
       "default": "infer"
     },
 
     "class_member_variable_alignment": {
-      "$ref": "#/$defs/alignmentPolicy",
+      "allOf": [
+        {
+          "$ref": "#/definitions/alignmentPolicy"
+        }
+      ],
       "description": "Alignment of class member variables.",
       "default": "infer"
     },
 
     "distribution_items_alignment": {
-      "$ref": "#/$defs/alignmentPolicy",
+      "allOf": [
+        {
+          "$ref": "#/definitions/alignmentPolicy"
+        }
+      ],
       "description": "Alignment of distribution items.",
       "default": "infer"
     },
 
     "port_declarations_indentation": {
-      "$ref": "#/$defs/indentationPolicy",
+      "allOf": [
+        {
+          "$ref": "#/definitions/indentationPolicy"
+        }
+      ],
       "description": "Indentation of ports in a module or interface header.",
       "default": "wrap"
     },
 
     "formal_parameters_indentation": {
-      "$ref": "#/$defs/indentationPolicy",
+      "allOf": [
+        {
+          "$ref": "#/definitions/indentationPolicy"
+        }
+      ],
       "description": "Indentation of formal parameters in a header.",
       "default": "wrap"
     },
 
     "named_parameter_indentation": {
-      "$ref": "#/$defs/indentationPolicy",
+      "allOf": [
+        {
+          "$ref": "#/definitions/indentationPolicy"
+        }
+      ],
       "description": "Indentation of named parameters in an instantiation.",
       "default": "wrap"
     },
 
     "named_port_indentation": {
-      "$ref": "#/$defs/indentationPolicy",
+      "allOf": [
+        {
+          "$ref": "#/definitions/indentationPolicy"
+        }
+      ],
       "description": "Indentation of named ports in an instantiation.",
       "default": "wrap"
     },
 
     "alignment_group_boundary": {
-      "$ref": "#/$defs/alignmentGroupBoundary",
+      "allOf": [
+        {
+          "$ref": "#/definitions/alignmentGroupBoundary"
+        }
+      ],
       "description": "Rule determining where an alignment group ends.",
       "default": "none"
     },
@@ -226,7 +294,7 @@
     }
   },
 
-  "$defs": {
+  "definitions": {
     "alignmentPolicy": {
       "type": "string",
       "enum": [
