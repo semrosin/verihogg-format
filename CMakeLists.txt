@@ -25,13 +25,29 @@ find_package(valijson CONFIG REQUIRED)
 
 # Embed the configuration JSON schema into the binary so that runtime
 # validation does not depend on files installed alongside the executable.
+# The generated translation unit is self-contained: sources that IDE tooling
+# parses never include files from the build tree.
 set(VHG_SCHEMA_FILE
   ${CMAKE_CURRENT_SOURCE_DIR}/schemas/verihogg-format.schema.json)
 set(VHG_GENERATED_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated)
 file(MAKE_DIRECTORY ${VHG_GENERATED_DIR}/config)
 file(READ ${VHG_SCHEMA_FILE} VHG_SCHEMA_JSON)
-file(WRITE ${VHG_GENERATED_DIR}/config/schema_embedded.inc
-  "R\"VHG(\n${VHG_SCHEMA_JSON}\n)VHG\"\n")
+file(WRITE ${VHG_GENERATED_DIR}/config/schema_embedded.cpp
+"#include \"config/schema_embedded.h\"
+
+namespace format::config {
+
+auto embeddedSchemaJson() -> std::string_view {
+  return
+R\"VHG(
+${VHG_SCHEMA_JSON}
+)VHG\";
+}
+
+}  // namespace format::config
+")
+file(REMOVE ${VHG_GENERATED_DIR}/config/schema_embedded.inc)
+set(VHG_GENERATED_SOURCE ${VHG_GENERATED_DIR}/config/schema_embedded.cpp)
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
   ${VHG_SCHEMA_FILE})
 
@@ -45,12 +61,11 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
-add_executable(${PROJECT_NAME} ${SRC})
+add_executable(${PROJECT_NAME} ${SRC} ${VHG_GENERATED_SOURCE})
 
 target_include_directories(${PROJECT_NAME}
   PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/formatter/include>
-  $<BUILD_INTERFACE:${VHG_GENERATED_DIR}>
 )
 target_link_libraries(${PROJECT_NAME} PRIVATE slang::slang Microsoft.GSL::GSL CLI11::CLI11 yaml-cpp::yaml-cpp ${VHG_VALIJSON_TARGET})
 
@@ -86,10 +101,9 @@ if(GTest_FOUND)
   file(GLOB_RECURSE LIB_SRC CONFIGURE_DEPENDS formatter/src/**.cpp)
   list(FILTER LIB_SRC EXCLUDE REGEX ".*/main\\.cpp$")
 
-  add_library(verihogg-format-lib STATIC ${LIB_SRC})
+  add_library(verihogg-format-lib STATIC ${LIB_SRC} ${VHG_GENERATED_SOURCE})
   target_include_directories(verihogg-format-lib PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/formatter/include>
-    $<BUILD_INTERFACE:${VHG_GENERATED_DIR}>)
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/formatter/include>)
   target_link_libraries(verihogg-format-lib PUBLIC slang::slang CLI11::CLI11)
   target_link_libraries(verihogg-format-lib PRIVATE yaml-cpp::yaml-cpp ${VHG_VALIJSON_TARGET})
 

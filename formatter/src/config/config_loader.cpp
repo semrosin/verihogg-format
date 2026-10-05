@@ -15,16 +15,14 @@
 #include <valijson/validator.hpp>
 #include <vector>
 
+#include "config/schema_embedded.h"
+
 namespace format::config {
 
 namespace {
 
 namespace fs = std::filesystem;
 using valijson::adapters::YamlCppAdapter;
-
-constexpr std::string_view kSchemaJson =
-#include "config/schema_embedded.inc"
-    ;
 
 constexpr std::array<std::string_view, 2> kConfigFileNames = {
     ".verihogg-format.yaml",
@@ -40,7 +38,7 @@ constexpr std::array<std::string_view, 2> kConfigFileNames = {
 [[nodiscard]] auto embeddedSchema() -> const valijson::Schema& {
   static const valijson::Schema schema = [] {
     valijson::Schema result;
-    const YAML::Node node = YAML::Load(std::string(kSchemaJson));
+    const YAML::Node node = YAML::Load(std::string(embeddedSchemaJson()));
     valijson::SchemaParser parser(valijson::SchemaParser::kDraft7);
     parser.populateSchema(YamlCppAdapter(node), result);
     return result;
