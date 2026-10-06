@@ -1,5 +1,6 @@
 #include "config/config_loader.h"
 
+#include <fmt/ranges.h>
 #include <yaml-cpp/yaml.h>
 
 #include <array>
@@ -38,7 +39,7 @@ constexpr std::array<std::string_view, 2> kConfigFileNames = {
 [[nodiscard]] auto embeddedSchema() -> const valijson::Schema& {
   static const valijson::Schema schema = [] {
     valijson::Schema result;
-    const YAML::Node node = YAML::Load(std::string(embeddedSchemaJson()));
+    const auto node = YAML::Load(std::string(embeddedSchemaJson()));
     valijson::SchemaParser parser(valijson::SchemaParser::kDraft7);
     parser.populateSchema(YamlCppAdapter(node), result);
     return result;
@@ -84,14 +85,14 @@ constexpr std::array<std::string_view, 2> kConfigFileNames = {
   if (pointer.front() != '/') {
     return {};
   }
-  YAML::Node node = root;
+  auto node = root;
   size_t pos = 1;
   while (pos <= pointer.size()) {
     const size_t slash = pointer.find('/', pos);
-    const std::string_view raw = pointer.substr(
-        pos,
-        slash == std::string_view::npos ? std::string_view::npos : slash - pos);
-    const std::string segment = unescapePointerSegment(raw);
+    const auto raw = pointer.substr(pos, slash == std::string_view::npos
+                                             ? std::string_view::npos
+                                             : slash - pos);
+    const auto segment = unescapePointerSegment(raw);
     if (node.IsSequence()) {
       try {
         node = node[std::stoul(segment)];
@@ -129,18 +130,6 @@ constexpr std::array<std::string_view, 2> kConfigFileNames = {
   return std::string(message.substr(start, end - start));
 }
 
-[[nodiscard]] auto joinMessages(const std::vector<std::string>& messages)
-    -> std::string {
-  std::string result;
-  for (const auto& message : messages) {
-    if (!result.empty()) {
-      result += '\n';
-    }
-    result += message;
-  }
-  return result;
-}
-
 auto validateDocument(const YAML::Node& doc, const fs::path& path) -> void {
   valijson::Validator validator(valijson::Validator::kWeakTypes);
   valijson::ValidationResults results;
@@ -168,22 +157,22 @@ auto validateDocument(const YAML::Node& doc, const fs::path& path) -> void {
                                  "unknown option '" + *key + "'"));
       continue;
     }
-    const YAML::Node node = resolvePointer(doc, error.jsonPointer);
+    const auto node = resolvePointer(doc, error.jsonPointer);
     const std::string option = lastPointerSegment(error.jsonPointer);
-    std::string message = option.empty() ? std::string{} : option + ": ";
+    auto message = option.empty() ? std::string{} : option + ": ";
     message += error.description;
     messages.push_back(errorAt(path, node ? node.Mark() : doc.Mark(), message));
   }
   if (messages.empty()) {
     messages.push_back(errorAt(path, doc.Mark(), "invalid configuration"));
   }
-  throw std::runtime_error(joinMessages(messages));
+  throw std::runtime_error(fmt::format("{}", fmt::join(messages, "\n")));
 }
 
 auto applyDocument(const YAML::Node& doc, FormatStyle& style) -> void {
   for (const auto& entry : doc) {
     const auto key = entry.first.as<std::string>();
-    const YAML::Node& value = entry.second;
+    const auto& value = entry.second;
     if (key == "version" || key == "style" || key == "$schema") {
       continue;
     }
@@ -314,7 +303,7 @@ ConfigResolver::ConfigResolver(std::optional<fs::path> explicit_config) {
   if (!explicit_config) {
     return;
   }
-  const fs::path path = fs::absolute(*explicit_config);
+  const auto path = fs::absolute(*explicit_config);
   if (!fs::exists(path)) {
     throw std::runtime_error("Config file not found: " + path.string());
   }
@@ -346,15 +335,15 @@ auto ConfigResolver::resolveFrom(const fs::path& directory) -> FormatStyle {
 
 auto ConfigResolver::findConfig(const fs::path& directory)
     -> std::optional<fs::path> {
-  const fs::path start = fs::absolute(directory).lexically_normal();
+  const auto start = fs::absolute(directory).lexically_normal();
   if (const auto it = search_cache_.find(start); it != search_cache_.end()) {
     return it->second;
   }
 
   std::optional<fs::path> found;
-  for (fs::path dir = start;;) {
-    for (const std::string_view name : kConfigFileNames) {
-      const fs::path candidate = dir / name;
+  for (auto dir = start;;) {
+    for (const auto name : kConfigFileNames) {
+      const auto candidate = dir / name;
       if (fs::is_regular_file(candidate)) {
         found = candidate;
         break;
@@ -363,7 +352,7 @@ auto ConfigResolver::findConfig(const fs::path& directory)
     if (found) {
       break;
     }
-    const fs::path parent = dir.parent_path();
+    const auto parent = dir.parent_path();
     if (parent == dir) {
       break;
     }
