@@ -125,8 +125,6 @@ docker run --rm -v "$(pwd)":/data -w /data \
 | `--config PATH`                     | Use this configuration file instead of searching for one.      |
 | `-h, --help`                        | Show help and exit.                                            |
 
-Command-line options override values from the [configuration file](#configuration-file).
-
 ### Exit codes
 
 | Code | Meaning                                       |
