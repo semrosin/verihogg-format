@@ -8,25 +8,13 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <vector>
 
 #include "cli/format_args.h"
 #include "config/config_loader.h"
 #include "data/lex_context.h"
 #include "formatter.h"
 #include "pipeline/runner.h"
-
-namespace {
-
-auto printWarning(std::ostream& os, std::string_view path,
-                  const format::FormatWarning& warning) -> void {
-  os << "Warning";
-  if (!path.empty()) {
-    os << " in " << path;
-  }
-  os << ": " << warning.message << " [" << warning.code << "]\n";
-}
-
-}  // namespace
 
 auto main(int argc, char** argv) -> int {
   try {
@@ -51,17 +39,19 @@ auto main(int argc, char** argv) -> int {
       driver.sourceLoader.addFiles(file);
     }
 
-    std::optional<std::filesystem::path> config_path;
-    if (binder.configPath().has_value()) {
-      config_path = *binder.configPath();
-    }
-    format::config::ConfigResolver resolver(config_path);
+    format::config::ConfigResolver resolver(
+        binder.configPath()
+            ? std::optional<std::filesystem::path>{*binder.configPath()}
+            : std::nullopt);
     const format::RunConfig run = binder.buildRunConfig();
 
-    auto styleFor = [&binder, &resolver](const std::filesystem::path& file) {
-      format::FormatStyle style = resolver.resolve(file);
+    auto applyOverrides = [&binder](format::FormatStyle style) {
       binder.applyStyleOverrides(style);
       return style;
+    };
+    auto styleFor = [&resolver,
+                     &applyOverrides](const std::filesystem::path& file) {
+      return applyOverrides(resolver.resolve(file));
     };
 
     const auto& files = driver.sourceLoader.getFilePaths();
@@ -71,8 +61,7 @@ auto main(int argc, char** argv) -> int {
     }
 
     if (files.empty()) {
-      format::FormatStyle style = resolver.resolveForStdin();
-      binder.applyStyleOverrides(style);
+      const auto style = applyOverrides(resolver.resolveForStdin());
       std::string source{std::istreambuf_iterator<char>(std::cin),
                          std::istreambuf_iterator<char>()};
       if (source.empty()) {
@@ -82,7 +71,7 @@ auto main(int argc, char** argv) -> int {
       auto tokens = ctx.lex_string(source);
       auto result = format::format(tokens, style);
       for (const auto& warning : result.warnings) {
-        printWarning(std::cerr, "<stdin>", warning);
+        format::printWarning(std::cerr, "<stdin>", warning);
       }
       std::cout << result.formatted_text;
       return 0;
@@ -90,10 +79,12 @@ auto main(int argc, char** argv) -> int {
 
     // Resolve all styles before formatting anything so that a broken config
     // cannot leave a partially formatted run behind.
+    std::vector<format::FormatStyle> styles;
+    styles.reserve(files.size());
     for (const auto& file : files) {
-      (void)styleFor(file);
+      styles.push_back(styleFor(file));
     }
-    runFormatter(files, styleFor, run, {.out = &std::cout, .err = &std::cerr});
+    runFormatter(files, styles, run, {.out = &std::cout, .err = &std::cerr});
     return 0;
   } catch (const std::exception& e) {
     std::cerr << "Error: " << e.what() << "\n";

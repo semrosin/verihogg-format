@@ -97,13 +97,6 @@ auto FormatArgsBinder::buildRunConfig() const -> RunConfig {
   return run;
 }
 
-auto FormatArgsBinder::buildStyle(const FormatStyle& base)
-    -> std::pair<FormatStyle, RunConfig> {
-  FormatStyle style = base;
-  applyStyleOverrides(style);
-  return {style, buildRunConfig()};
-}
-
 void FormatArgsBinder::parse(int argc, char** argv) { app_.parse(argc, argv); }
 
 }  // namespace format

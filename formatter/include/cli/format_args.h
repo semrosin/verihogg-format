@@ -29,10 +29,6 @@ class FormatArgsBinder {
 
   [[nodiscard]] auto buildRunConfig() const -> RunConfig;
 
-  // Convenience wrapper: applies CLI overrides to base and builds RunConfig.
-  auto buildStyle(const FormatStyle& base = FormatStyle::defaults())
-      -> std::pair<FormatStyle, RunConfig>;
-
   // Path passed via --config, if any.
   [[nodiscard]] auto configPath() const -> const std::optional<std::string>& {
     return config_path_;
