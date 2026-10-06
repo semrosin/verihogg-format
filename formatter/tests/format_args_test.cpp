@@ -43,7 +43,9 @@ class FormatArgsTest : public ::testing::Test {
     if (!binder.has_value()) {
       throw std::runtime_error("binder is not initialized");
     }
-    return binder->buildStyle(base);
+    format::FormatStyle style = base;
+    binder->applyStyleOverrides(style);
+    return {style, binder->buildRunConfig()};
   }
 
   [[nodiscard]] auto getBinder() -> format::FormatArgsBinder& {
