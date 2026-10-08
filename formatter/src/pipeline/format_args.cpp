@@ -2,9 +2,10 @@
 
 #include <slang/driver/Driver.h>
 
+#include <array>
+#include <span>
 #include <string>
 #include <utility>
-#include <vector>
 
 #include "data/format_style.h"
 
@@ -20,10 +21,11 @@ namespace {
 
 // Allowed values shared by the enum-valued options. These mirror the enums in
 // schemas/verihogg-format.schema.json.
-const std::vector<std::string> kAlignmentPolicyValues = {"align", "flush-left",
-                                                         "preserve", "infer"};
-const std::vector<std::string> kIndentationPolicyValues = {"indent", "wrap"};
-const std::vector<std::string> kAlignmentGroupBoundaryValues = {
+constexpr std::array<std::string_view, 4> kAlignmentPolicyValues = {
+    "align", "flush-left", "preserve", "infer"};
+constexpr std::array<std::string_view, 2> kIndentationPolicyValues = {"indent",
+                                                                      "wrap"};
+constexpr std::array<std::string_view, 4> kAlignmentGroupBoundaryValues = {
     "none", "blank-lines", "separator-comments",
     "blank-lines-and-separator-comments"};
 
@@ -31,14 +33,14 @@ const std::vector<std::string> kAlignmentGroupBoundaryValues = {
 struct ChoiceOption {
   std::string_view name{};
   std::string_view description{};
-  const std::vector<std::string>* values = nullptr;
+  std::span<const std::string_view> values{};
 };
 
 // Registers a long-only option constrained to a fixed set of values.
 void add_choice(CLI::App& app, std::optional<std::string>& val,
                 const ChoiceOption& option) {
   app.add_option(std::string(option.name), val, std::string(option.description))
-      ->check(CLI::IsMember(*option.values));
+      ->check(CLI::IsMember(option.values));
 }
 
 // Registers a boolean option together with its "--no_<name>" counterpart so
@@ -136,73 +138,85 @@ FormatArgsBinder::FormatArgsBinder() {
 
   // The options below mirror the keys of the YAML configuration file, so that
   // every configurable style property is also reachable from the command line.
-  add_choice(app_, port_declarations_alignment_,
-             {"--port_declarations_alignment",
-              "Alignment of port direction, type, dimensions and name",
-              &kAlignmentPolicyValues});
+  add_choice(
+      app_, port_declarations_alignment_,
+      {.name = "--port_declarations_alignment",
+       .description = "Alignment of port direction, type, dimensions and name",
+       .values = kAlignmentPolicyValues});
   add_choice(app_, module_net_variable_alignment_,
-             {"--module_net_variable_alignment",
-              "Alignment of net and variable declarations inside blocks",
-              &kAlignmentPolicyValues});
+             {.name = "--module_net_variable_alignment",
+              .description =
+                  "Alignment of net and variable declarations inside blocks",
+              .values = kAlignmentPolicyValues});
   add_choice(app_, assignment_statement_alignment_,
-             {"--assignment_statement_alignment",
-              "Alignment of assignment statements", &kAlignmentPolicyValues});
+             {.name = "--assignment_statement_alignment",
+              .description = "Alignment of assignment statements",
+              .values = kAlignmentPolicyValues});
   add_choice(
       app_, formal_parameters_alignment_,
-      {"--formal_parameters_alignment",
-       "Alignment of formal parameters in module, interface and class headers",
-       &kAlignmentPolicyValues});
+      {.name = "--formal_parameters_alignment",
+       .description =
+           "Alignment of formal parameters in module, interface and class "
+           "headers",
+       .values = kAlignmentPolicyValues});
   add_choice(app_, named_parameter_alignment_,
-             {"--named_parameter_alignment",
-              "Alignment of named parameters in instantiations",
-              &kAlignmentPolicyValues});
+             {.name = "--named_parameter_alignment",
+              .description = "Alignment of named parameters in instantiations",
+              .values = kAlignmentPolicyValues});
   add_choice(app_, named_port_alignment_,
-             {"--named_port_alignment", "Alignment of named port connections",
-              &kAlignmentPolicyValues});
+             {.name = "--named_port_alignment",
+              .description = "Alignment of named port connections",
+              .values = kAlignmentPolicyValues});
   add_choice(
       app_, parameter_declaration_alignment_,
-      {"--parameter_declaration_alignment",
-       "Alignment of parameter and localparam declarations in block bodies",
-       &kAlignmentPolicyValues});
+      {.name = "--parameter_declaration_alignment",
+       .description =
+           "Alignment of parameter and localparam declarations in block bodies",
+       .values = kAlignmentPolicyValues});
   add_choice(app_, case_items_alignment_,
-             {"--case_items_alignment", "Alignment of case item labels",
-              &kAlignmentPolicyValues});
-  add_choice(
-      app_, enum_assignment_statement_alignment_,
-      {"--enum_assignment_statement_alignment",
-       "Alignment of enum elements with assignments", &kAlignmentPolicyValues});
-  add_choice(
-      app_, struct_union_members_alignment_,
-      {"--struct_union_members_alignment",
-       "Alignment of struct and union members", &kAlignmentPolicyValues});
+             {.name = "--case_items_alignment",
+              .description = "Alignment of case item labels",
+              .values = kAlignmentPolicyValues});
+  add_choice(app_, enum_assignment_statement_alignment_,
+             {.name = "--enum_assignment_statement_alignment",
+              .description = "Alignment of enum elements with assignments",
+              .values = kAlignmentPolicyValues});
+  add_choice(app_, struct_union_members_alignment_,
+             {.name = "--struct_union_members_alignment",
+              .description = "Alignment of struct and union members",
+              .values = kAlignmentPolicyValues});
   add_choice(app_, class_member_variable_alignment_,
-             {"--class_member_variable_alignment",
-              "Alignment of class member variables", &kAlignmentPolicyValues});
+             {.name = "--class_member_variable_alignment",
+              .description = "Alignment of class member variables",
+              .values = kAlignmentPolicyValues});
   add_choice(app_, distribution_items_alignment_,
-             {"--distribution_items_alignment",
-              "Alignment of distribution items", &kAlignmentPolicyValues});
+             {.name = "--distribution_items_alignment",
+              .description = "Alignment of distribution items",
+              .values = kAlignmentPolicyValues});
 
-  add_choice(app_, port_declarations_indentation_,
-             {"--port_declarations_indentation",
-              "Indentation of ports in a module or interface header",
-              &kIndentationPolicyValues});
+  add_choice(
+      app_, port_declarations_indentation_,
+      {.name = "--port_declarations_indentation",
+       .description = "Indentation of ports in a module or interface header",
+       .values = kIndentationPolicyValues});
   add_choice(app_, formal_parameters_indentation_,
-             {"--formal_parameters_indentation",
-              "Indentation of formal parameters in a header",
-              &kIndentationPolicyValues});
-  add_choice(app_, named_parameter_indentation_,
-             {"--named_parameter_indentation",
-              "Indentation of named parameters in an instantiation",
-              &kIndentationPolicyValues});
+             {.name = "--formal_parameters_indentation",
+              .description = "Indentation of formal parameters in a header",
+              .values = kIndentationPolicyValues});
+  add_choice(
+      app_, named_parameter_indentation_,
+      {.name = "--named_parameter_indentation",
+       .description = "Indentation of named parameters in an instantiation",
+       .values = kIndentationPolicyValues});
   add_choice(app_, named_port_indentation_,
-             {"--named_port_indentation",
-              "Indentation of named ports in an instantiation",
-              &kIndentationPolicyValues});
+             {.name = "--named_port_indentation",
+              .description = "Indentation of named ports in an instantiation",
+              .values = kIndentationPolicyValues});
 
   add_choice(app_, alignment_group_boundary_,
-             {"--alignment_group_boundary",
-              "Rule determining where an alignment group ends",
-              &kAlignmentGroupBoundaryValues});
+             {.name = "--alignment_group_boundary",
+              .description = "Rule determining where an alignment group ends",
+              .values = kAlignmentGroupBoundaryValues});
 
   add_negatable_flag(app_, "--port_declarations_right_align_packed_dimensions",
                      port_declarations_right_align_packed_dimensions_,
