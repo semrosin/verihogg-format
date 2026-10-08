@@ -2,7 +2,9 @@
 
 #include <slang/driver/Driver.h>
 
+#include <string>
 #include <utility>
+#include <vector>
 
 #include "data/format_style.h"
 
@@ -13,6 +15,41 @@ void add_aliased(CLI::App& app, std::string_view lng, std::string_view sht,
                  std::optional<T>& val, std::string_view desc) {
   app.add_option(fmt::format("{},{}", sht, lng), val, std::string(desc));
 }
+
+namespace {
+
+// Allowed values shared by the enum-valued options. These mirror the enums in
+// schemas/verihogg-format.schema.json.
+const std::vector<std::string> kAlignmentPolicyValues = {"align", "flush-left",
+                                                         "preserve", "infer"};
+const std::vector<std::string> kIndentationPolicyValues = {"indent", "wrap"};
+const std::vector<std::string> kAlignmentGroupBoundaryValues = {
+    "none", "blank-lines", "separator-comments",
+    "blank-lines-and-separator-comments"};
+
+// Describes a long-only option constrained to a fixed set of values.
+struct ChoiceOption {
+  std::string_view name{};
+  std::string_view description{};
+  const std::vector<std::string>* values = nullptr;
+};
+
+// Registers a long-only option constrained to a fixed set of values.
+void add_choice(CLI::App& app, std::optional<std::string>& val,
+                const ChoiceOption& option) {
+  app.add_option(std::string(option.name), val, std::string(option.description))
+      ->check(CLI::IsMember(*option.values));
+}
+
+// Registers a boolean option together with its "--no_<name>" counterpart so
+// that a value coming from a configuration file can be turned off again.
+void add_negatable_flag(CLI::App& app, std::string_view lng,
+                        std::optional<bool>& val, std::string_view desc) {
+  app.add_flag(fmt::format("{},!--no_{}", lng, lng.substr(2)), val,
+               std::string(desc));
+}
+
+}  // namespace
 
 void FormatArgsBinder::printFormatterHelp() const {
   fmt::print(R"(
@@ -27,6 +64,41 @@ Formatting options:
   -t, --line_terminator <mode>         auto | lf | crlf (default: auto)
       --config <path>                  Load configuration from a YAML file
   -n, --inplace                        Overwrite source files instead of stdout
+
+Alignment options (align | flush-left | preserve | infer, default: infer):
+      --port_declarations_alignment
+      --module_net_variable_alignment
+      --assignment_statement_alignment
+      --formal_parameters_alignment
+      --named_parameter_alignment
+      --named_port_alignment
+      --parameter_declaration_alignment
+      --case_items_alignment
+      --enum_assignment_statement_alignment
+      --struct_union_members_alignment
+      --class_member_variable_alignment
+      --distribution_items_alignment
+
+Indentation options (indent | wrap, default: wrap):
+      --port_declarations_indentation
+      --formal_parameters_indentation
+      --named_parameter_indentation
+      --named_port_indentation
+
+Alignment grouping:
+      --alignment_group_boundary <rule>  none | blank-lines | separator-comments |
+                                         blank-lines-and-separator-comments (default: none)
+
+Boolean options (use --no_<name> to disable):
+      --port_declarations_right_align_packed_dimensions
+      --port_declarations_right_align_unpacked_dimensions
+      --compact_indexing_and_selections   (default: true)
+      --class_parameter_space
+      --expand_coverpoints
+      --try_wrap_long_lines
+      --wrap_end_else_clauses
+
+Every option above mirrors a key of the YAML configuration file.
 )");
 }
 
@@ -62,6 +134,95 @@ FormatArgsBinder::FormatArgsBinder() {
   app_.add_option("--config", config_path_,
                   "Load configuration from a YAML file");
 
+  // The options below mirror the keys of the YAML configuration file, so that
+  // every configurable style property is also reachable from the command line.
+  add_choice(app_, port_declarations_alignment_,
+             {"--port_declarations_alignment",
+              "Alignment of port direction, type, dimensions and name",
+              &kAlignmentPolicyValues});
+  add_choice(app_, module_net_variable_alignment_,
+             {"--module_net_variable_alignment",
+              "Alignment of net and variable declarations inside blocks",
+              &kAlignmentPolicyValues});
+  add_choice(app_, assignment_statement_alignment_,
+             {"--assignment_statement_alignment",
+              "Alignment of assignment statements", &kAlignmentPolicyValues});
+  add_choice(
+      app_, formal_parameters_alignment_,
+      {"--formal_parameters_alignment",
+       "Alignment of formal parameters in module, interface and class headers",
+       &kAlignmentPolicyValues});
+  add_choice(app_, named_parameter_alignment_,
+             {"--named_parameter_alignment",
+              "Alignment of named parameters in instantiations",
+              &kAlignmentPolicyValues});
+  add_choice(app_, named_port_alignment_,
+             {"--named_port_alignment", "Alignment of named port connections",
+              &kAlignmentPolicyValues});
+  add_choice(
+      app_, parameter_declaration_alignment_,
+      {"--parameter_declaration_alignment",
+       "Alignment of parameter and localparam declarations in block bodies",
+       &kAlignmentPolicyValues});
+  add_choice(app_, case_items_alignment_,
+             {"--case_items_alignment", "Alignment of case item labels",
+              &kAlignmentPolicyValues});
+  add_choice(
+      app_, enum_assignment_statement_alignment_,
+      {"--enum_assignment_statement_alignment",
+       "Alignment of enum elements with assignments", &kAlignmentPolicyValues});
+  add_choice(
+      app_, struct_union_members_alignment_,
+      {"--struct_union_members_alignment",
+       "Alignment of struct and union members", &kAlignmentPolicyValues});
+  add_choice(app_, class_member_variable_alignment_,
+             {"--class_member_variable_alignment",
+              "Alignment of class member variables", &kAlignmentPolicyValues});
+  add_choice(app_, distribution_items_alignment_,
+             {"--distribution_items_alignment",
+              "Alignment of distribution items", &kAlignmentPolicyValues});
+
+  add_choice(app_, port_declarations_indentation_,
+             {"--port_declarations_indentation",
+              "Indentation of ports in a module or interface header",
+              &kIndentationPolicyValues});
+  add_choice(app_, formal_parameters_indentation_,
+             {"--formal_parameters_indentation",
+              "Indentation of formal parameters in a header",
+              &kIndentationPolicyValues});
+  add_choice(app_, named_parameter_indentation_,
+             {"--named_parameter_indentation",
+              "Indentation of named parameters in an instantiation",
+              &kIndentationPolicyValues});
+  add_choice(app_, named_port_indentation_,
+             {"--named_port_indentation",
+              "Indentation of named ports in an instantiation",
+              &kIndentationPolicyValues});
+
+  add_choice(app_, alignment_group_boundary_,
+             {"--alignment_group_boundary",
+              "Rule determining where an alignment group ends",
+              &kAlignmentGroupBoundaryValues});
+
+  add_negatable_flag(app_, "--port_declarations_right_align_packed_dimensions",
+                     port_declarations_right_align_packed_dimensions_,
+                     "Right-align packed dimensions in port declarations");
+  add_negatable_flag(app_,
+                     "--port_declarations_right_align_unpacked_dimensions",
+                     port_declarations_right_align_unpacked_dimensions_,
+                     "Right-align unpacked dimensions in port declarations");
+  add_negatable_flag(app_, "--compact_indexing_and_selections",
+                     compact_indexing_and_selections_,
+                     "Use compact expressions inside indexes and selections");
+  add_negatable_flag(app_, "--class_parameter_space", class_parameter_space_,
+                     "Insert a space before # in parameterized class typedefs");
+  add_negatable_flag(app_, "--expand_coverpoints", expand_coverpoints_,
+                     "Always expand coverpoints");
+  add_negatable_flag(app_, "--try_wrap_long_lines", try_wrap_long_lines_,
+                     "Allow optimization-based wrapping of long lines");
+  add_negatable_flag(app_, "--wrap_end_else_clauses", wrap_end_else_clauses_,
+                     "Place end and else clauses on separate lines");
+
   // Positional "files". Tokens not starting with '-' are placed here by
   // CLI11 itself — before attempts to match them with options, so there's
   // no need to manually classify "file or unknown flag".
@@ -86,6 +247,101 @@ void FormatArgsBinder::applyStyleOverrides(FormatStyle& style) const {
   }
   if (line_terminator_.has_value()) {
     style.line_terminator = lineTerminatorFromString(*line_terminator_);
+  }
+
+  if (port_declarations_alignment_.has_value()) {
+    style.port_declarations_alignment =
+        alignmentPolicyFromString(*port_declarations_alignment_);
+  }
+  if (module_net_variable_alignment_.has_value()) {
+    style.module_net_variable_alignment =
+        alignmentPolicyFromString(*module_net_variable_alignment_);
+  }
+  if (assignment_statement_alignment_.has_value()) {
+    style.assignment_statement_alignment =
+        alignmentPolicyFromString(*assignment_statement_alignment_);
+  }
+  if (formal_parameters_alignment_.has_value()) {
+    style.formal_parameters_alignment =
+        alignmentPolicyFromString(*formal_parameters_alignment_);
+  }
+  if (named_parameter_alignment_.has_value()) {
+    style.named_parameter_alignment =
+        alignmentPolicyFromString(*named_parameter_alignment_);
+  }
+  if (named_port_alignment_.has_value()) {
+    style.named_port_alignment =
+        alignmentPolicyFromString(*named_port_alignment_);
+  }
+  if (parameter_declaration_alignment_.has_value()) {
+    style.parameter_declaration_alignment =
+        alignmentPolicyFromString(*parameter_declaration_alignment_);
+  }
+  if (case_items_alignment_.has_value()) {
+    style.case_items_alignment =
+        alignmentPolicyFromString(*case_items_alignment_);
+  }
+  if (enum_assignment_statement_alignment_.has_value()) {
+    style.enum_assignment_statement_alignment =
+        alignmentPolicyFromString(*enum_assignment_statement_alignment_);
+  }
+  if (struct_union_members_alignment_.has_value()) {
+    style.struct_union_members_alignment =
+        alignmentPolicyFromString(*struct_union_members_alignment_);
+  }
+  if (class_member_variable_alignment_.has_value()) {
+    style.class_member_variable_alignment =
+        alignmentPolicyFromString(*class_member_variable_alignment_);
+  }
+  if (distribution_items_alignment_.has_value()) {
+    style.distribution_items_alignment =
+        alignmentPolicyFromString(*distribution_items_alignment_);
+  }
+
+  if (port_declarations_indentation_.has_value()) {
+    style.port_declarations_indentation =
+        indentationPolicyFromString(*port_declarations_indentation_);
+  }
+  if (formal_parameters_indentation_.has_value()) {
+    style.formal_parameters_indentation =
+        indentationPolicyFromString(*formal_parameters_indentation_);
+  }
+  if (named_parameter_indentation_.has_value()) {
+    style.named_parameter_indentation =
+        indentationPolicyFromString(*named_parameter_indentation_);
+  }
+  if (named_port_indentation_.has_value()) {
+    style.named_port_indentation =
+        indentationPolicyFromString(*named_port_indentation_);
+  }
+
+  if (alignment_group_boundary_.has_value()) {
+    style.alignment_group_boundary =
+        alignmentGroupBoundaryFromString(*alignment_group_boundary_);
+  }
+
+  if (port_declarations_right_align_packed_dimensions_.has_value()) {
+    style.port_declarations_right_align_packed_dimensions =
+        *port_declarations_right_align_packed_dimensions_;
+  }
+  if (port_declarations_right_align_unpacked_dimensions_.has_value()) {
+    style.port_declarations_right_align_unpacked_dimensions =
+        *port_declarations_right_align_unpacked_dimensions_;
+  }
+  if (compact_indexing_and_selections_.has_value()) {
+    style.compact_indexing_and_selections = *compact_indexing_and_selections_;
+  }
+  if (class_parameter_space_.has_value()) {
+    style.class_parameter_space = *class_parameter_space_;
+  }
+  if (expand_coverpoints_.has_value()) {
+    style.expand_coverpoints = *expand_coverpoints_;
+  }
+  if (try_wrap_long_lines_.has_value()) {
+    style.try_wrap_long_lines = *try_wrap_long_lines_;
+  }
+  if (wrap_end_else_clauses_.has_value()) {
+    style.wrap_end_else_clauses = *wrap_end_else_clauses_;
   }
 }
 
