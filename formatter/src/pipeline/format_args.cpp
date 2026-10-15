@@ -64,9 +64,12 @@ Formatting options:
   -w, --wrap_spaces <N>                Additional indentation when wrapping (default: 4)
   -b, --line_break_penalty <N>         Penalty for each line break (default: 2)
   -p, --over_column_limit_penalty <N>  Penalty per character over limit (default: 100)
-  -t, --line_terminator <mode>         auto | lf | crlf (default: auto)
+  -t, --line_terminator <mode>         auto | lf | crlf (default: auto; auto currently emits LF)
       --config <path>                  Load configuration from a YAML file
   -n, --inplace                        Overwrite source files instead of stdout
+
+The style options below are reserved and do not affect formatting yet.
+Line-wrap search currently always runs, regardless of --try_wrap_long_lines.
 
 Alignment options (align | flush-left | preserve | infer, default: infer):
       --port_declarations_alignment

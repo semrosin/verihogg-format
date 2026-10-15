@@ -125,11 +125,19 @@ docker run --rm -v "$(pwd)":/data -w /data \
 | `--config PATH`                     | Use this configuration file instead of searching for one.      |
 | `-h, --help`                        | Show help and exit.                                            |
 
-### Style options
+### Reserved style options (not yet implemented)
 
-Every option below mirrors a key of the configuration file, so any style
-setting can also be given on the command line. A value passed on the command
-line overrides the value from the configuration file.
+The basic formatting options in the preceding table are implemented.
+`line_terminator: auto` currently emits LF; detecting line endings from the
+input is not implemented yet.
+
+All options in the table below are accepted by the CLI and configuration loader
+and stored in `FormatStyle`, but **have no effect on formatting yet**. In
+particular, `try_wrap_long_lines` does not control line wrapping: the formatter
+currently always runs the line-wrap search.
+
+Every option below mirrors a key of the configuration file. A value passed on
+the command line overrides the value stored from the configuration file.
 
 | Option                                       | Description                                                                                          |
 | -------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
@@ -188,21 +196,29 @@ directory of each input file; for stdin, the search starts in the current
 working directory. `--config PATH` loads a specific file instead of searching.
 
 ```yaml
-version: "1.0"
+version: "0.1.0"
 column_limit: 120
 indentation_spaces: 4
 line_terminator: lf
 port_declarations_alignment: flush-left
 ```
 
-`version` is required and must be `"1.0"`; all other keys are optional. Values
+`version` is required and must be `"0.1.0"`; all other keys are optional. Values
 are resolved in this order (later wins):
 
 1. built-in defaults,
-2. the selected `style` profile (`default`, `lowrisc` or `scr1`; the latter two
-   currently match `default`),
+2. the selected `style` profile (reserved; see below),
 3. values from the configuration file,
 4. command-line options.
+
+Named style profiles are **not implemented yet**. The `style` key accepts
+`default`, `lowrisc` and `scr1`, but all three currently use the built-in defaults.
+The reserved options listed above are validated and loaded, but do not affect
+the formatter output.
+
+The YAML validator accepts scalar values that can be converted to the declared
+type, including quoted integers and booleans (for example, `column_limit: "120"`).
+Enum values and numeric limits are still checked.
 
 The file is validated against
 [`schemas/verihogg-format.schema.json`](schemas/verihogg-format.schema.json):
@@ -211,7 +227,7 @@ Editors can pick up the same schema when the file references it:
 
 ```yaml
 $schema: "https://raw.githubusercontent.com/verihogg/verihogg-format/main/schemas/verihogg-format.schema.json"
-version: "1.0"
+version: "0.1.0"
 column_limit: 120
 ```
 

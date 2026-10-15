@@ -131,6 +131,10 @@ constexpr std::array<std::string_view, 2> kConfigFileNames = {
 }
 
 auto validateDocument(const YAML::Node& doc, const fs::path& path) -> void {
+  // YamlCppAdapter reports all scalars as strings: isInteger() and isBool()
+  // always return false. Weak checking uses scalar conversions so ordinary
+  // YAML numbers and booleans (including quoted values) can satisfy the
+  // schema. Strong checking would reject those options even without quotes.
   valijson::Validator validator(valijson::Validator::kWeakTypes);
   valijson::ValidationResults results;
   if (validator.validate(embeddedSchema(), YamlCppAdapter(doc), &results)) {

@@ -24,7 +24,7 @@ using format::config::ConfigResolver;
 using format::config::loadConfigFile;
 
 constexpr std::string_view kAllOptionsConfig = R"(
-version: "1.0"
+version: "0.1.0"
 $schema: "https://example.com/schema.json"
 style: default
 column_limit: 120
@@ -89,7 +89,7 @@ class ConfigLoaderTest : public ::testing::Test {
 };
 
 TEST_F(ConfigLoaderTest, MinimalConfigKeepsDefaults) {
-  const fs::path path = writeFile("cfg.yaml", "version: \"1.0\"\n");
+  const fs::path path = writeFile("cfg.yaml", "version: \"0.1.0\"\n");
 
   const FormatStyle style = loadConfigFile(path);
   const FormatStyle defaults = FormatStyle::defaults();
@@ -150,7 +150,7 @@ TEST_F(ConfigLoaderTest, AllSchemaOptionsAreApplied) {
 
 TEST_F(ConfigLoaderTest, UnknownOptionReportsKeyAndPosition) {
   const fs::path path =
-      writeFile("cfg.yaml", "version: \"1.0\"\ncolumn_limitt: 100\n");
+      writeFile("cfg.yaml", "version: \"0.1.0\"\ncolumn_limitt: 100\n");
 
   try {
     (void)loadConfigFile(path);
@@ -165,7 +165,7 @@ TEST_F(ConfigLoaderTest, UnknownOptionReportsKeyAndPosition) {
 
 TEST_F(ConfigLoaderTest, WrongOptionTypeFails) {
   const fs::path path =
-      writeFile("cfg.yaml", "version: \"1.0\"\ncolumn_limit: abc\n");
+      writeFile("cfg.yaml", "version: \"0.1.0\"\ncolumn_limit: abc\n");
 
   try {
     (void)loadConfigFile(path);
@@ -178,7 +178,7 @@ TEST_F(ConfigLoaderTest, WrongOptionTypeFails) {
 
 TEST_F(ConfigLoaderTest, UnknownEnumValueFails) {
   const fs::path path =
-      writeFile("cfg.yaml", "version: \"1.0\"\nline_terminator: bogus\n");
+      writeFile("cfg.yaml", "version: \"0.1.0\"\nline_terminator: bogus\n");
 
   try {
     (void)loadConfigFile(path);
@@ -200,13 +200,13 @@ TEST_F(ConfigLoaderTest, MissingVersionFails) {
 }
 
 TEST_F(ConfigLoaderTest, UnsupportedVersionFails) {
-  const fs::path path = writeFile("cfg.yaml", "version: \"2.0\"\n");
+  const fs::path path = writeFile("cfg.yaml", "version: \"1.0\"\n");
 
   EXPECT_THROW((void)loadConfigFile(path), std::runtime_error);
 }
 
 TEST_F(ConfigLoaderTest, SyntaxErrorReportsPosition) {
-  const fs::path path = writeFile("cfg.yaml", "version: [1.0\n");
+  const fs::path path = writeFile("cfg.yaml", "version: [0.1.0\n");
 
   try {
     (void)loadConfigFile(path);
@@ -221,7 +221,7 @@ TEST_F(ConfigLoaderTest, SyntaxErrorReportsPosition) {
 TEST_F(ConfigLoaderTest, SchemaKeyIsAccepted) {
   const fs::path path = writeFile(
       "cfg.yaml",
-      "version: \"1.0\"\n$schema: \"https://example.com/schema.json\"\n");
+      "version: \"0.1.0\"\n$schema: \"https://example.com/schema.json\"\n");
 
   const FormatStyle style = loadConfigFile(path);
   EXPECT_EQ(style.column_limit, 100U);
@@ -229,7 +229,7 @@ TEST_F(ConfigLoaderTest, SchemaKeyIsAccepted) {
 
 TEST_F(ConfigLoaderTest, ProfilePlaceholderAndOverrides) {
   const fs::path path = writeFile(
-      "cfg.yaml", "version: \"1.0\"\nstyle: scr1\ncolumn_limit: 120\n");
+      "cfg.yaml", "version: \"0.1.0\"\nstyle: scr1\ncolumn_limit: 120\n");
 
   const FormatStyle style = loadConfigFile(path);
   EXPECT_EQ(style.column_limit, 120U);
@@ -238,24 +238,64 @@ TEST_F(ConfigLoaderTest, ProfilePlaceholderAndOverrides) {
 
 TEST_F(ConfigLoaderTest, UnknownProfileFails) {
   const fs::path path =
-      writeFile("cfg.yaml", "version: \"1.0\"\nstyle: nope\n");
+      writeFile("cfg.yaml", "version: \"0.1.0\"\nstyle: nope\n");
 
   EXPECT_THROW((void)loadConfigFile(path), std::runtime_error);
 }
 
 TEST_F(ConfigLoaderTest, QuotedNumbersAreAccepted) {
   const fs::path path =
-      writeFile("cfg.yaml", "version: \"1.0\"\ncolumn_limit: \"120\"\n");
+      writeFile("cfg.yaml", "version: \"0.1.0\"\ncolumn_limit: \"120\"\n");
 
   const FormatStyle style = loadConfigFile(path);
   EXPECT_EQ(style.column_limit, 120U);
 }
 
+TEST_F(ConfigLoaderTest, QuotedBooleansAreAccepted) {
+  const fs::path path = writeFile(
+      "cfg.yaml",
+      "version: \"0.1.0\"\ncompact_indexing_and_selections: \"false\"\n");
+
+  const FormatStyle style = loadConfigFile(path);
+  EXPECT_FALSE(style.compact_indexing_and_selections);
+}
+
+TEST_F(ConfigLoaderTest, InvalidScalarValuesReportOptionAndPosition) {
+  struct InvalidOption {
+    std::string_view name;
+    std::string_view value;
+  };
+  for (const auto& option : {
+           InvalidOption{"column_limit", "1.5"},
+           InvalidOption{"column_limit", "0"},
+           InvalidOption{"column_limit", "true"},
+           InvalidOption{"indentation_spaces", "-1"},
+           InvalidOption{"line_break_penalty", "-1"},
+           InvalidOption{"compact_indexing_and_selections", "abc"},
+           InvalidOption{"compact_indexing_and_selections", "1"},
+       }) {
+    SCOPED_TRACE(std::string(option.name) + ": " + std::string(option.value));
+    const fs::path path = writeFile(
+        "cfg.yaml", "version: \"0.1.0\"\n" + std::string(option.name) + ": " +
+                        std::string(option.value) + "\n");
+
+    try {
+      (void)loadConfigFile(path);
+      FAIL() << "expected loadConfigFile to throw";
+    } catch (const std::runtime_error& e) {
+      const std::string message = e.what();
+      EXPECT_NE(message.find(option.name), std::string::npos) << message;
+      EXPECT_NE(message.find(path.string() + ":2:"), std::string::npos)
+          << message;
+    }
+  }
+}
+
 TEST_F(ConfigLoaderTest, NearestConfigWins) {
   writeFile("root/.verihogg-format.yaml",
-            "version: \"1.0\"\ncolumn_limit: 120\n");
+            "version: \"0.1.0\"\ncolumn_limit: 120\n");
   writeFile("root/sub/.verihogg-format.yaml",
-            "version: \"1.0\"\ncolumn_limit: 80\n");
+            "version: \"0.1.0\"\ncolumn_limit: 80\n");
 
   ConfigResolver resolver(std::nullopt);
 
@@ -272,9 +312,9 @@ TEST_F(ConfigLoaderTest, MissingConfigKeepsDefaults) {
 
 TEST_F(ConfigLoaderTest, ExplicitConfigBeatsSearch) {
   const fs::path explicit_config =
-      writeFile("other/custom.yaml", "version: \"1.0\"\ncolumn_limit: 90\n");
+      writeFile("other/custom.yaml", "version: \"0.1.0\"\ncolumn_limit: 90\n");
   writeFile("root/.verihogg-format.yaml",
-            "version: \"1.0\"\ncolumn_limit: 120\n");
+            "version: \"0.1.0\"\ncolumn_limit: 120\n");
 
   ConfigResolver resolver(explicit_config);
 
@@ -287,7 +327,7 @@ TEST_F(ConfigLoaderTest, MissingExplicitConfigFails) {
 
 TEST_F(ConfigLoaderTest, YmlExtensionIsSupported) {
   writeFile("root/.verihogg-format.yml",
-            "version: \"1.0\"\ncolumn_limit: 110\n");
+            "version: \"0.1.0\"\ncolumn_limit: 110\n");
 
   ConfigResolver resolver(std::nullopt);
 
@@ -295,7 +335,7 @@ TEST_F(ConfigLoaderTest, YmlExtensionIsSupported) {
 }
 
 TEST_F(ConfigLoaderTest, ResolveForStdinUsesWorkingDirectory) {
-  writeFile(".verihogg-format.yaml", "version: \"1.0\"\ncolumn_limit: 111\n");
+  writeFile(".verihogg-format.yaml", "version: \"0.1.0\"\ncolumn_limit: 111\n");
 
   const fs::path old_cwd = fs::current_path();
   fs::current_path(dir());

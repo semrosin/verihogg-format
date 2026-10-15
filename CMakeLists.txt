@@ -46,7 +46,6 @@ ${VHG_SCHEMA_JSON}
 
 }  // namespace format::config
 ")
-file(REMOVE ${VHG_GENERATED_DIR}/config/schema_embedded.inc)
 set(VHG_GENERATED_SOURCE ${VHG_GENERATED_DIR}/config/schema_embedded.cpp)
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
   ${VHG_SCHEMA_FILE})
