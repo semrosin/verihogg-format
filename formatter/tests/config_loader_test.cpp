@@ -2,6 +2,7 @@
 
 #include <gtest/gtest.h>
 
+#include <cstddef>
 #include <filesystem>
 #include <fstream>
 #include <optional>
@@ -62,10 +63,18 @@ wrap_end_else_clauses: true
 class ConfigLoaderTest : public ::testing::Test {
  protected:
   void SetUp() override {
-    static int counter = 0;
-    dir_ = fs::temp_directory_path() /
-           ("vhg-config-test-" + std::to_string(counter++));
-    fs::create_directories(dir_);
+    static size_t counter = 0;
+    const fs::path tempRoot = fs::temp_directory_path();
+    for (;;) {
+      const fs::path candidate =
+          tempRoot / ("vhg-config-test-" + std::to_string(counter++));
+      // CTest runs cases in separate processes. Claim a directory atomically
+      // and retry if another case already owns the candidate.
+      if (fs::create_directory(candidate)) {
+        dir_ = candidate;
+        return;
+      }
+    }
   }
 
   void TearDown() override {
