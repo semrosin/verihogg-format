@@ -10,6 +10,7 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <system_error>
 
 #include "data/format_style.h"
 
@@ -65,11 +66,19 @@ class ConfigLoaderTest : public ::testing::Test {
  protected:
   void SetUp() override {
     std::array<char, L_tmpnam> name{};
-    // GoogleTest runs cases sequentially within each process.
-    // NOLINTNEXTLINE(concurrency-mt-unsafe)
-    ASSERT_NE(std::tmpnam(name.data()), nullptr);
-    const fs::path candidate = name.data();
-    ASSERT_TRUE(fs::create_directory(candidate));
+    fs::path candidate;
+    bool created = false;
+    // Generate a fresh name before each attempt to claim the directory.
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-do-while)
+    do {
+      // GoogleTest runs cases sequentially within each process.
+      // NOLINTNEXTLINE(concurrency-mt-unsafe)
+      ASSERT_NE(std::tmpnam(name.data()), nullptr);
+      candidate = name.data();
+      std::error_code code;
+      created = fs::create_directory(candidate, code);
+      ASSERT_TRUE(!code || code == std::errc::file_exists) << code.message();
+    } while (!created);
     dir_ = candidate;
   }
 
