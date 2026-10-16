@@ -2,7 +2,8 @@
 
 #include <gtest/gtest.h>
 
-#include <cstddef>
+#include <array>
+#include <cstdio>
 #include <filesystem>
 #include <fstream>
 #include <optional>
@@ -63,18 +64,13 @@ wrap_end_else_clauses: true
 class ConfigLoaderTest : public ::testing::Test {
  protected:
   void SetUp() override {
-    static size_t counter = 0;
-    const fs::path tempRoot = fs::temp_directory_path();
-    for (;;) {
-      const fs::path candidate =
-          tempRoot / ("vhg-config-test-" + std::to_string(counter++));
-      // CTest runs cases in separate processes. Claim a directory atomically
-      // and retry if another case already owns the candidate.
-      if (fs::create_directory(candidate)) {
-        dir_ = candidate;
-        return;
-      }
-    }
+    std::array<char, L_tmpnam> name{};
+    // GoogleTest runs cases sequentially within each process.
+    // NOLINTNEXTLINE(concurrency-mt-unsafe)
+    ASSERT_NE(std::tmpnam(name.data()), nullptr);
+    const fs::path candidate = name.data();
+    ASSERT_TRUE(fs::create_directory(candidate));
+    dir_ = candidate;
   }
 
   void TearDown() override {
