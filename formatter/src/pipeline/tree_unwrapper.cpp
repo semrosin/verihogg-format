@@ -133,14 +133,15 @@ class SVParser {
 
   // ---- line management ----
 
-  auto addLine() -> void {
+  auto addLine(size_t continuationIndent = 0) -> void {
     if (line_.tokens.empty()) {
       return;
     }
     line_.indentation_spaces =
         startsWithCompilerDirective(line_)
             ? 0
-            : indent_level_ * style_.get().indentation_spaces;
+            : indent_level_ * style_.get().indentation_spaces +
+                  continuationIndent;
     lines_.push_back(std::move(line_));
     line_ = Line{};
   }
@@ -1042,14 +1043,14 @@ class SVParser {
     }
     if (at(TK::Hash)) {
       consumeInto(line_);
-      parseParenthesizedListInto(line_);
+      parseParenthesizedList();
       while (at(TK::Directive)) {
         addLine();
         parseDirectiveLine();
       }
     }
     consumeInto(line_);  // instance name
-    parseParenthesizedListInto(line_);
+    parseParenthesizedList();
     if (at(TK::Semicolon)) {
       consumeInto(line_);
     }
@@ -1173,11 +1174,11 @@ class SVParser {
 
   // Each top-level comma-separated item in a parenthesized list gets its own
   // UnwrappedLine, so parameters and ports can expand vertically.
-  auto parseParenthesizedListInto(Line& line) -> void {
+  auto parseParenthesizedList() -> void {
     if (!at(TK::OpenParenthesis)) {
       return;
     }
-    line.tokens.push_back(consume());
+    consumeInto(line_);
 
     addLine();
     int parenDepth = 0;
@@ -1194,22 +1195,22 @@ class SVParser {
       }
 
       if (atTopLevel() && isCompilerDirective(peek()) &&
-          (line.tokens.empty() || hasLeadingNewline(peek()))) {
+          (line_.tokens.empty() || hasLeadingNewline(peek()))) {
         addLine();
 
-        consumeInto(line);
+        consumeInto(line_);
         while (pos_ < tokens_.size() && !at(TK::EndOfFile)) {
           if (hasLeadingNewline(peek())) {
             break;
           }
-          consumeInto(line);
+          consumeInto(line_);
         }
         addLine();
         continue;
       }
 
       if (at(TK::Comma) && atTopLevel()) {
-        consumeInto(line);
+        consumeInto(line_);
         addLine();
         continue;
       }
@@ -1243,11 +1244,11 @@ class SVParser {
         default:
           break;
       }
-      consumeInto(line);
+      consumeInto(line_);
     }
     addLine();
     if (at(TK::CloseParenthesis)) {
-      line.tokens.push_back(consume());
+      consumeInto(line_);
     }
   }
 
@@ -1264,7 +1265,7 @@ class SVParser {
       consumeBalancedInto(TK::OpenParenthesis, TK::CloseParenthesis, line_);
     }
     // port list: each port is a child line of the '(' node
-    parseParenthesizedListInto(line_);
+    parseParenthesizedList();
     if (at(TK::Semicolon)) {
       consumeInto(line_);
     }
