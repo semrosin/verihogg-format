@@ -14,6 +14,7 @@ namespace {
 using format::FormatStyle;
 using format::IndentationPolicy;
 
+constexpr size_t kIndentationSpaces = 3;
 constexpr size_t kWrapSpaces = 7;
 constexpr size_t kNamedItemIndent = 6;
 constexpr size_t kWrappedNamedItemIndent = 10;
@@ -66,13 +67,13 @@ TEST_P(ListIndentationPolicyTest, UsesConfiguredWidthRelativeToBlock) {
        {IndentationPolicy::kIndent, IndentationPolicy::kWrap}) {
     SCOPED_TRACE(policy == IndentationPolicy::kIndent ? "indent" : "wrap");
     FormatStyle style;
-    style.indentation_spaces = 3;
+    style.indentation_spaces = kIndentationSpaces;
     style.wrap_spaces = kWrapSpaces;
     style.*(testCase.option) = policy;
     const auto formatted = formatText(testCase.source, style);
     const size_t base = testCase.blockDepth * style.indentation_spaces;
     const size_t continuation =
-        policy == IndentationPolicy::kIndent ? 3 : kWrapSpaces;
+        policy == IndentationPolicy::kIndent ? kIndentationSpaces : kWrapSpaces;
     expectIndentation(formatted, testCase.item, base + continuation);
     expectIndentation(formatted, testCase.closing, base);
     EXPECT_EQ(formatText(formatted, style), formatted);
@@ -85,7 +86,8 @@ TEST_P(ListIndentationPolicyTest, AcceptsZeroContinuationWidth) {
        {IndentationPolicy::kIndent, IndentationPolicy::kWrap}) {
     SCOPED_TRACE(policy == IndentationPolicy::kIndent ? "indent" : "wrap");
     FormatStyle style;
-    style.indentation_spaces = policy == IndentationPolicy::kIndent ? 0 : 3;
+    style.indentation_spaces =
+        policy == IndentationPolicy::kIndent ? 0 : kIndentationSpaces;
     style.wrap_spaces = policy == IndentationPolicy::kWrap ? 0 : kWrapSpaces;
     style.*(testCase.option) = policy;
     const auto formatted = formatText(testCase.source, style);
@@ -153,7 +155,7 @@ INSTANTIATE_TEST_SUITE_P(Lists, ListIndentationPolicyTest,
 
 TEST_F(ListIndentationTest, PoliciesAreIndependentAndDoNotLeakIntoBody) {
   FormatStyle style;
-  style.indentation_spaces = 3;
+  style.indentation_spaces = kIndentationSpaces;
   style.wrap_spaces = kWrapSpaces;
   style.port_declarations_indentation = IndentationPolicy::kIndent;
   style.formal_parameters_indentation = IndentationPolicy::kWrap;
@@ -165,10 +167,10 @@ TEST_F(ListIndentationTest, PoliciesAreIndependentAndDoNotLeakIntoBody) {
       style);
 
   expectIndentation(formatted, "parameter int WIDTH", kWrapSpaces);
-  expectIndentation(formatted, "input logic clk", 3);
+  expectIndentation(formatted, "input logic clk", kIndentationSpaces);
   expectIndentation(formatted, ".WIDTH", kNamedItemIndent);
   expectIndentation(formatted, ".clk", kWrappedNamedItemIndent);
-  expectIndentation(formatted, "logic after_list", 3);
+  expectIndentation(formatted, "logic after_list", kIndentationSpaces);
   expectIndentation(formatted, "endmodule", 0);
   EXPECT_EQ(formatText(formatted, style), formatted);
 }
@@ -177,7 +179,7 @@ TEST_F(ListIndentationTest, NamedPoliciesDoNotAffectPositionalArguments) {
   const std::string source =
       "module m; child #(8, 16) inst(clk, rst); endmodule";
   FormatStyle style;
-  style.indentation_spaces = 3;
+  style.indentation_spaces = kIndentationSpaces;
   style.wrap_spaces = kWrapSpaces;
   const auto wrapped = formatText(source, style);
   style.named_parameter_indentation = IndentationPolicy::kIndent;
