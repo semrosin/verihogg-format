@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20 FATAL_ERROR)
 
-project(verihogg-format VERSION 1.0 LANGUAGES CXX)
+project(verihogg-format VERSION 0.1.0 LANGUAGES CXX)
 
 # Default build type
 if(NOT CMAKE_BUILD_TYPE)
