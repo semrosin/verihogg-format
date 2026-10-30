@@ -67,6 +67,8 @@ Formatting options:
   -t, --line_terminator <mode>         auto | lf | crlf (default: auto; auto currently emits LF)
       --config <path>                  Load configuration from a YAML file
   -n, --inplace                        Overwrite source files instead of stdout
+      --compact_indexing_and_selections   Compact binary expressions in indexes (default: true)
+      --no_compact_indexing_and_selections  Disable compact indexing
 
 The style options below are reserved and do not affect formatting yet.
 Line-wrap search currently always runs, regardless of --try_wrap_long_lines.
@@ -98,7 +100,6 @@ Alignment grouping:
 Boolean options (use --no_<name> to disable):
       --port_declarations_right_align_packed_dimensions
       --port_declarations_right_align_unpacked_dimensions
-      --compact_indexing_and_selections   (default: true)
       --class_parameter_space
       --expand_coverpoints
       --try_wrap_long_lines

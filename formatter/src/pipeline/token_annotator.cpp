@@ -375,6 +375,8 @@ auto TokenAnnotator::determineTokenTypes(gsl::span<FormatToken> tokens) const
       case TK::Slash:
       case TK::Percent:
       case TK::DoubleStar:
+      case TK::PlusColon:
+      case TK::MinusColon:
         ft.type = TokenType::kBinaryOperator;
         continue;
 
@@ -750,6 +752,80 @@ auto implComputeInterTokenInfo(gsl::span<FormatToken> tokens) -> void {
   }
 }
 
+// A declaration's outermost brackets before its initializer are dimensions;
+// brackets nested inside those dimensions still denote indexing expressions.
+[[nodiscard]] auto startsDeclaration(gsl::span<FormatToken> tokens) -> bool {
+  if (tokens.empty()) {
+    return false;
+  }
+  const auto first = tokens.front().token.kind;
+  if (tokens.front().type == TokenType::kTypeKeyword ||
+      tokens.front().type == TokenType::kPortDirection ||
+      first == TK::ParameterKeyword || first == TK::LocalParamKeyword) {
+    return true;
+  }
+  if (first != TK::Identifier) {
+    return false;
+  }
+  size_t next = 1;
+  while (next < tokens.size() && tokens[next].token.kind == TK::OpenBracket &&
+         tokens[next].matching_bracket != nullptr) {
+    next =
+        static_cast<size_t>(tokens[next].matching_bracket - tokens.data()) + 1;
+  }
+  return next < tokens.size() && tokens[next].token.kind == TK::Identifier;
+}
+
+auto compactIndexExpressions(gsl::span<FormatToken> tokens) -> void {
+  const bool declaration = startsDeclaration(tokens);
+  bool initializer = false;
+  size_t parentheses = 0;
+  size_t braces = 0;
+  std::vector<bool> index_brackets;
+  for (size_t i = 0; i < tokens.size(); ++i) {
+    auto& token = tokens[i];
+    const TK kind = token.token.kind;
+    if (kind == TK::Equals && index_brackets.empty() && parentheses == 0 &&
+        braces == 0) {
+      initializer = true;
+    } else if (kind == TK::Comma && index_brackets.empty() &&
+               parentheses == 0 && braces == 0) {
+      initializer = false;
+    } else if (kind == TK::OpenParenthesis) {
+      ++parentheses;
+    } else if (kind == TK::CloseParenthesis && parentheses > 0) {
+      --parentheses;
+    } else if (kind == TK::OpenBrace || kind == TK::ApostropheOpenBrace) {
+      ++braces;
+    } else if (kind == TK::CloseBrace && braces > 0) {
+      --braces;
+    } else if (kind == TK::OpenBracket) {
+      const bool dimension = declaration && !initializer &&
+                             index_brackets.empty() && parentheses == 0 &&
+                             braces == 0;
+      index_brackets.push_back(!dimension);
+    } else if (kind == TK::CloseBracket && !index_brackets.empty()) {
+      index_brackets.pop_back();
+    }
+    if (i == 0 || index_brackets.empty() || !index_brackets.back()) {
+      continue;
+    }
+    const auto& previous = tokens[i - 1];
+    const bool binary = previous.type == TokenType::kBinaryOperator ||
+                        token.type == TokenType::kBinaryOperator;
+    const bool adjacent_operators =
+        (previous.type == TokenType::kBinaryOperator ||
+         previous.type == TokenType::kUnaryOperator) &&
+        (token.type == TokenType::kBinaryOperator ||
+         token.type == TokenType::kUnaryOperator);
+    const bool escaped_identifier = previous.token.kind == TK::Identifier &&
+                                    previous.token.rawText().starts_with('\\');
+    if (binary && !adjacent_operators && !escaped_identifier) {
+      token.before.spaces_required = 0;
+    }
+  }
+}
+
 }  // namespace
 
 // ---------------------------------------------------------------------------
@@ -760,6 +836,9 @@ auto TokenAnnotator::annotateSpan(gsl::span<FormatToken> tokens) const -> void {
   matchBrackets(tokens);
   determineTokenTypes(tokens);
   implComputeInterTokenInfo(tokens);
+  if (style.get().compact_indexing_and_selections) {
+    compactIndexExpressions(tokens);
+  }
 }
 
 auto TokenAnnotator::annotateUnwrappedLine(

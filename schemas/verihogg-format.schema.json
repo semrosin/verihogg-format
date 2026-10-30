@@ -265,7 +265,7 @@
 
     "compact_indexing_and_selections": {
       "type": "boolean",
-      "description": "Use compact expressions inside indexes and selections. Not implemented yet: accepted and stored, but has no effect on formatting.",
+      "description": "Use compact binary expressions inside indexes and selections, excluding declaration dimensions.",
       "default": true
     },
 

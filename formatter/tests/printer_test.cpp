@@ -35,6 +35,55 @@ TEST_F(PrinterTest, PrintsFormattedCode) {
             "endmodule\n");
 }
 
+TEST_F(PrinterTest, CompactIndexExpressionsRespectDeclarationDimensions) {
+  const std::string source =
+      "module m;\n"
+      "  logic [N-1:0] data [N-1:0];\n"
+      "  assign y = data[i+1];\n"
+      "  assign z = data[index[j+1]-1];\n"
+      "  assign w = data[i + +j];\n"
+      "endmodule\n";
+  auto style = format::FormatStyle::defaults();
+  style.compact_indexing_and_selections = false;
+  const auto expanded = formatText(source, style);
+  EXPECT_NE(expanded.find("logic [N - 1 : 0] data [N - 1 : 0];"),
+            std::string::npos);
+  EXPECT_NE(expanded.find("data [i + 1]"), std::string::npos);
+
+  style.compact_indexing_and_selections = true;
+  const auto compact = formatText(source, style);
+  EXPECT_NE(compact.find("logic [N - 1 : 0] data [N - 1 : 0];"),
+            std::string::npos);
+  EXPECT_NE(compact.find("data [i+1]"), std::string::npos);
+  EXPECT_NE(compact.find("index [j+1]-1"), std::string::npos);
+  EXPECT_NE(compact.find("data [i+ +j]"), std::string::npos);
+  EXPECT_EQ(formatText(compact, style), compact);
+}
+
+TEST_F(PrinterTest, CompactIndexingHandlesSelectionsCommentsAndRecovery) {
+  const std::string source =
+      "module m;\n"
+      "  my_type [N-1:0] values;\n"
+      "  logic first = values[i+1], second [N-1:0];\n"
+      "  assign a = values[i+:W];\n"
+      "  assign b = values[sel?i+1:j-1];\n"
+      "  assign c = values[i /* comment */ + 1];\n"
+      "  assign broken = 'h?;\n"
+      "  assign d = values[k-1];\n"
+      "endmodule\n";
+  auto style = format::FormatStyle::defaults();
+  style.compact_indexing_and_selections = true;
+  const auto compact = formatText(source, style);
+  EXPECT_NE(compact.find("my_type [N - 1 : 0] values;"), std::string::npos);
+  EXPECT_NE(compact.find("second [N - 1 : 0]"), std::string::npos);
+  EXPECT_NE(compact.find("values [i+:W]"), std::string::npos);
+  EXPECT_NE(compact.find("values [sel ? i+1 : j-1]"), std::string::npos);
+  EXPECT_NE(compact.find("/* comment */"), std::string::npos);
+  EXPECT_NE(compact.find("assign broken = 'h?;"), std::string::npos);
+  EXPECT_NE(compact.find("values [k-1]"), std::string::npos);
+  EXPECT_EQ(formatText(compact, style), compact);
+}
+
 TEST_F(PrinterTest, KeepsWhitespaceAfterEscapedIdentifiers) {
   EXPECT_EQ(formatText("module m; reg \\foo ; assign x = \\foo ; endmodule"),
             "module m;\n"
