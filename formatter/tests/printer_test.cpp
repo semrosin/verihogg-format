@@ -60,10 +60,182 @@ TEST_F(PrinterTest, CompactIndexExpressionsRespectDeclarationDimensions) {
   EXPECT_EQ(formatText(compact, style), compact);
 }
 
+TEST_F(PrinterTest, CompactIndexingPreservesFunctionTypeDimensions) {
+  const std::string source =
+      "module m;\n"
+      "  function logic [WIDTH-1:0] f(input logic [WIDTH-1:0] arg);\n"
+      "    f = arg[index+1];\n"
+      "  endfunction\n"
+      "endmodule\n";
+  auto style = format::FormatStyle::defaults();
+  style.compact_indexing_and_selections = true;
+  const auto formatted = formatText(source, style);
+  EXPECT_NE(formatted.find("function logic [WIDTH - 1 : 0]"),
+            std::string::npos);
+  EXPECT_NE(formatted.find("input logic [WIDTH - 1 : 0]"), std::string::npos);
+  EXPECT_NE(formatted.find("arg [index+1]"), std::string::npos);
+  EXPECT_EQ(formatText(formatted, style), formatted);
+}
+
+TEST_F(PrinterTest, CompactIndexingFormatsBothConditionalBranches) {
+  const std::string source =
+      "module m;\n"
+      "`ifdef FEATURE\n"
+      "  assign a = data[i + 1];\n"
+      "`else\n"
+      "  assign b = data[j + 1];\n"
+      "`endif\n"
+      "endmodule\n";
+  auto style = format::FormatStyle::defaults();
+  style.compact_indexing_and_selections = true;
+  const auto formatted = formatText(source, style);
+  EXPECT_NE(formatted.find("data [i+1]"), std::string::npos);
+  EXPECT_NE(formatted.find("data [j+1]"), std::string::npos);
+  EXPECT_EQ(formatText(formatted, style), formatted);
+}
+
+TEST_F(PrinterTest, ConditionalSyntaxContextsIncludeNestedAndElsifBranches) {
+  const std::string source =
+      "module m;\n"
+      "`ifdef FIRST\n"
+      "  typedef first#(N) first_t;\n"
+      "`ifdef INNER\n"
+      "  assign a = data[i + 1];\n"
+      "`else\n"
+      "  assign b = data[j + 1];\n"
+      "`endif\n"
+      "`elsif SECOND\n"
+      "  typedef second#(N) second_t;\n"
+      "  assign c = data[k + 1];\n"
+      "`else\n"
+      "  assign d = data[l + 1];\n"
+      "`endif\n"
+      "endmodule\n";
+  auto style = format::FormatStyle::defaults();
+  style.compact_indexing_and_selections = true;
+  style.class_parameter_space = true;
+  const auto formatted = formatText(source, style);
+  for (const std::string_view expected :
+       {"first #(N)", "second #(N)", "data [i+1]", "data [j+1]", "data [k+1]",
+        "data [l+1]"}) {
+    EXPECT_NE(formatted.find(expected), std::string::npos) << expected;
+  }
+  EXPECT_EQ(formatText(formatted, style), formatted);
+}
+
+TEST_F(PrinterTest, ConditionalSyntaxContextsHandleCompoundConditions) {
+  const std::string source =
+      "module m;\n"
+      "`ifdef (FIRST && !SECOND)\n"
+      "  assign a = data[i + 1];\n"
+      "`else\n"
+      "  assign b = data[j + 1];\n"
+      "`endif\n"
+      "endmodule\n";
+  auto style = format::FormatStyle::defaults();
+  style.compact_indexing_and_selections = true;
+  const auto formatted = formatText(source, style);
+  EXPECT_NE(formatted.find("data [i+1]"), std::string::npos);
+  EXPECT_NE(formatted.find("data [j+1]"), std::string::npos);
+  EXPECT_EQ(formatText(formatted, style), formatted);
+}
+
+TEST_F(PrinterTest, PreservesSyntaxWhenConditionalConfigurationsExceedBudget) {
+  const std::string source =
+      "`ifdef A\n`endif\n`ifdef B\n`endif\n`ifdef C\n`endif\n"
+      "`ifdef D\n`endif\n`ifdef E\n`endif\n`ifdef F\n`endif\n"
+      "`ifdef G\n`endif\n"
+      "module m;\n  assign a = data[i + 1];\nendmodule\n";
+  LexContext ctx;
+  const auto tokens = ctx.lex_string(source);
+  const auto result = format::format(tokens, format::FormatStyle::defaults(),
+                                     ctx.source_text());
+  EXPECT_NE(result.formatted_text.find("assign a = data[i + 1];"),
+            std::string::npos);
+  EXPECT_TRUE(std::ranges::any_of(result.warnings, [](const auto& warning) {
+    return warning.code == "syntax-context-unavailable";
+  }));
+  EXPECT_EQ(formatText(result.formatted_text), result.formatted_text);
+}
+
+TEST_F(PrinterTest, PreservesUnparsedConditionalSyntaxWithWarning) {
+  const std::string source =
+      "`define FEATURE\n"
+      "module m;\n"
+      "`ifdef FEATURE\n"
+      "  assign a = data[i + 1];\n"
+      "`else\n"
+      "  assign b = data[j + 1];\n"
+      "`endif\n"
+      "endmodule\n";
+  LexContext ctx;
+  const auto tokens = ctx.lex_string(source);
+  auto style = format::FormatStyle::defaults();
+  style.compact_indexing_and_selections = true;
+  const auto result = format::format(tokens, style, ctx.source_text());
+  EXPECT_NE(result.formatted_text.find("assign b = data[j + 1];"),
+            std::string::npos);
+  EXPECT_TRUE(std::ranges::any_of(result.warnings, [](const auto& warning) {
+    return warning.code == "syntax-context-unavailable";
+  }));
+  EXPECT_EQ(formatText(result.formatted_text, style), result.formatted_text);
+}
+
+TEST_F(PrinterTest, PreservesInvalidSelectionAndRecovers) {
+  const std::string source =
+      "module m;\n"
+      "  assign bad = data[i+ ];\n"
+      "  assign good = data[j + 1];\n"
+      "endmodule\n";
+  LexContext ctx;
+  const auto tokens = ctx.lex_string(source);
+  auto style = format::FormatStyle::defaults();
+  style.compact_indexing_and_selections = true;
+  const auto result = format::format(tokens, style, ctx.source_text());
+  EXPECT_NE(result.formatted_text.find("assign bad = data[i+ ];"),
+            std::string::npos);
+  EXPECT_NE(result.formatted_text.find("data [j+1]"), std::string::npos);
+  EXPECT_TRUE(std::ranges::any_of(result.warnings, [](const auto& warning) {
+    return warning.code == "syntax-context-unavailable";
+  }));
+  EXPECT_EQ(formatText(result.formatted_text, style), result.formatted_text);
+}
+
+TEST_F(PrinterTest, PreservesSelectionInsideInvalidStatement) {
+  const std::string source =
+      "module m;\n"
+      "  assign bad = data[i + 1] + ;\n"
+      "  assign good = data[j + 1];\n"
+      "endmodule\n";
+  LexContext ctx;
+  const auto tokens = ctx.lex_string(source);
+  const auto result = format::format(tokens, format::FormatStyle::defaults(),
+                                     ctx.source_text());
+  EXPECT_NE(result.formatted_text.find("assign bad = data[i + 1] + ;"),
+            std::string::npos);
+  EXPECT_NE(result.formatted_text.find("data [j+1]"), std::string::npos);
+  EXPECT_TRUE(std::ranges::any_of(result.warnings, [](const auto& warning) {
+    return warning.code == "syntax-context-unavailable";
+  }));
+}
+
+TEST_F(PrinterTest, ReportsMissingSourceForSyntaxDependentOptions) {
+  LexContext ctx;
+  const auto tokens =
+      ctx.lex_string("module m; assign y = data[i+1]; endmodule");
+  const auto result =
+      format::format(tokens, format::FormatStyle::defaults(), {});
+  EXPECT_NE(result.formatted_text.find("data"), std::string::npos);
+  EXPECT_TRUE(std::ranges::any_of(result.warnings, [](const auto& warning) {
+    return warning.code == "syntax-context-unavailable";
+  }));
+}
+
 TEST_F(PrinterTest, CompactIndexingHandlesSelectionsCommentsAndRecovery) {
   const std::string source =
       "module m;\n"
       "  my_type [N-1:0] values;\n"
+      "  my_type [sizes[i+1]-1:0] nested_values;\n"
       "  my_type#(P) typed [N-1:0];\n"
       "  logic [sizes[i+1]-1:0] nested;\n"
       "  logic first = values[i+1], second [N-1:0];\n"
@@ -77,6 +249,8 @@ TEST_F(PrinterTest, CompactIndexingHandlesSelectionsCommentsAndRecovery) {
   style.compact_indexing_and_selections = true;
   const auto compact = formatText(source, style);
   EXPECT_NE(compact.find("my_type [N - 1 : 0] values;"), std::string::npos);
+  EXPECT_NE(compact.find("my_type [sizes [i+1] - 1 : 0] nested_values;"),
+            std::string::npos);
   EXPECT_NE(compact.find("typed [N - 1 : 0]"), std::string::npos);
   EXPECT_NE(compact.find("sizes [i+1] - 1 : 0"), std::string::npos);
   EXPECT_NE(compact.find("second [N - 1 : 0]"), std::string::npos);

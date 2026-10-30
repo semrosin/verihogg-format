@@ -752,71 +752,9 @@ auto implComputeInterTokenInfo(gsl::span<FormatToken> tokens) -> void {
   }
 }
 
-// A declaration's outermost brackets before its initializer are dimensions;
-// brackets nested inside those dimensions still denote indexing expressions.
-[[nodiscard]] auto startsDeclaration(gsl::span<FormatToken> tokens) -> bool {
-  if (tokens.empty()) {
-    return false;
-  }
-  const auto first = tokens.front().token.kind;
-  if (tokens.front().type == TokenType::kTypeKeyword ||
-      tokens.front().type == TokenType::kPortDirection ||
-      first == TK::ParameterKeyword || first == TK::LocalParamKeyword) {
-    return true;
-  }
-  if (first != TK::Identifier) {
-    return false;
-  }
-  size_t next = 1;
-  if (next + 1 < tokens.size() && tokens[next].token.kind == TK::Hash &&
-      tokens[next + 1].token.kind == TK::OpenParenthesis &&
-      tokens[next + 1].matching_bracket != nullptr) {
-    next =
-        static_cast<size_t>(tokens[next + 1].matching_bracket - tokens.data()) +
-        1;
-  }
-  while (next < tokens.size() && tokens[next].token.kind == TK::OpenBracket &&
-         tokens[next].matching_bracket != nullptr) {
-    next =
-        static_cast<size_t>(tokens[next].matching_bracket - tokens.data()) + 1;
-  }
-  return next < tokens.size() && tokens[next].token.kind == TK::Identifier;
-}
-
 auto compactIndexExpressions(gsl::span<FormatToken> tokens) -> void {
-  const bool declaration = startsDeclaration(tokens);
-  bool initializer = false;
-  size_t parentheses = 0;
-  size_t braces = 0;
-  std::vector<bool> index_brackets;
-  for (size_t i = 0; i < tokens.size(); ++i) {
+  for (size_t i = 1; i < tokens.size(); ++i) {
     auto& token = tokens[i];
-    const TK kind = token.token.kind;
-    if (kind == TK::Equals && index_brackets.empty() && parentheses == 0 &&
-        braces == 0) {
-      initializer = true;
-    } else if (kind == TK::Comma && index_brackets.empty() &&
-               parentheses == 0 && braces == 0) {
-      initializer = false;
-    } else if (kind == TK::OpenParenthesis) {
-      ++parentheses;
-    } else if (kind == TK::CloseParenthesis && parentheses > 0) {
-      --parentheses;
-    } else if (kind == TK::OpenBrace || kind == TK::ApostropheOpenBrace) {
-      ++braces;
-    } else if (kind == TK::CloseBrace && braces > 0) {
-      --braces;
-    } else if (kind == TK::OpenBracket) {
-      const bool dimension = declaration && !initializer &&
-                             index_brackets.empty() && parentheses == 0 &&
-                             braces == 0;
-      index_brackets.push_back(!dimension);
-    } else if (kind == TK::CloseBracket && !index_brackets.empty()) {
-      index_brackets.pop_back();
-    }
-    if (i == 0 || index_brackets.empty() || !index_brackets.back()) {
-      continue;
-    }
     const auto& previous = tokens[i - 1];
     const bool binary = previous.type == TokenType::kBinaryOperator ||
                         token.type == TokenType::kBinaryOperator;
@@ -827,7 +765,10 @@ auto compactIndexExpressions(gsl::span<FormatToken> tokens) -> void {
          token.type == TokenType::kUnaryOperator);
     const bool escaped_identifier = previous.token.kind == TK::Identifier &&
                                     previous.token.rawText().starts_with('\\');
-    if (binary && !adjacent_operators && !escaped_identifier) {
+    if (previous.syntax.availability == SyntaxAvailability::kKnown &&
+        token.syntax.availability == SyntaxAvailability::kKnown &&
+        previous.syntax.in_selection && token.syntax.in_selection && binary &&
+        !adjacent_operators && !escaped_identifier) {
       token.before.spaces_required = 0;
     }
   }
@@ -835,13 +776,9 @@ auto compactIndexExpressions(gsl::span<FormatToken> tokens) -> void {
 
 auto applyClassParameterSpacing(gsl::span<FormatToken> tokens, bool spaced)
     -> void {
-  if (tokens.empty() || tokens.front().token.kind != TK::TypedefKeyword) {
-    return;
-  }
-  for (size_t i = 1; i + 1 < tokens.size(); ++i) {
-    if (tokens[i].token.kind != TK::Hash ||
-        tokens[i - 1].token.kind != TK::Identifier ||
-        tokens[i + 1].token.kind != TK::OpenParenthesis ||
+  for (size_t i = 1; i < tokens.size(); ++i) {
+    if (tokens[i].syntax.availability != SyntaxAvailability::kKnown ||
+        !tokens[i].syntax.typedef_class_parameter ||
         tokens[i - 1].token.rawText().starts_with('\\')) {
       continue;
     }
@@ -881,7 +818,24 @@ namespace {
 struct AnnotationFailure {
   slang::SourceLocation location;
   std::string reason;
+  std::string code = "invalid-annotation";
 };
+
+[[nodiscard]] auto missingSyntaxContext(const UnwrappedLine<FormatToken>& line,
+                                        bool compact_indexing)
+    -> std::optional<AnnotationFailure> {
+  for (const auto& token : line.tokens) {
+    const auto kind = token.token.kind;
+    if (token.syntax.availability == SyntaxAvailability::kAmbiguous ||
+        (token.syntax.availability == SyntaxAvailability::kUnknown &&
+         ((compact_indexing && kind == TK::OpenBracket) || kind == TK::Hash))) {
+      return AnnotationFailure{.location = token.token.location(),
+                               .reason = "syntax context is unavailable",
+                               .code = "syntax-context-unavailable"};
+    }
+  }
+  return std::nullopt;
+}
 
 [[nodiscard]] auto expectedClose(TK kind) -> std::optional<TK> {
   switch (kind) {
@@ -1005,7 +959,8 @@ struct AnnotationFailure {
 
 auto TokenAnnotator::annotateWithDiagnostics(
     const std::vector<UnwrappedLine<slang::parsing::Token>>& lines,
-    std::string_view original_source) -> AnnotationResult {
+    std::string_view original_source, const SyntaxContext* syntax_context)
+    -> AnnotationResult {
   AnnotationResult result;
   result.lines.reserve(lines.size());
   std::vector<std::optional<AnnotationFailure>> failures;
@@ -1015,10 +970,27 @@ auto TokenAnnotator::annotateWithDiagnostics(
     auto failure = original_source.empty() || line.is_opaque
                        ? std::nullopt
                        : validateLine(line);
-    result.lines.push_back(
-        line.map([](const slang::parsing::Token& tok) -> FormatToken {
-          return FormatToken{.token = tok};
+    result.lines.push_back(line.map(
+        [syntax_context](const slang::parsing::Token& tok) -> FormatToken {
+          return FormatToken{.token = tok,
+                             .syntax = syntax_context
+                                           ? syntax_context->lookup(tok)
+                                           : TokenSyntaxContext{}};
         }));
+    if (!failure && syntax_context != nullptr && !line.is_opaque) {
+      auto missing = missingSyntaxContext(
+          result.lines.back(), style.get().compact_indexing_and_selections);
+      if (missing && original_source.empty()) {
+        result.warnings.push_back({
+            .location = missing->location,
+            .code = missing->code,
+            .message = "syntax context is unavailable without original source; "
+                       "syntax-dependent spacing was not applied",
+        });
+      } else if (missing) {
+        failure = std::move(missing);
+      }
+    }
     if (!failure) {
       annotateUnwrappedLine(result.lines.back());
       if (!original_source.empty() && !line.is_opaque) {
@@ -1038,7 +1010,7 @@ auto TokenAnnotator::annotateWithDiagnostics(
     if (failure) {
       result.warnings.push_back({
           .location = failure->location,
-          .code = "invalid-annotation",
+          .code = failure->code,
           .message = "cannot annotate SystemVerilog line (" + failure->reason +
                      "); original text preserved",
       });

@@ -127,6 +127,15 @@ docker run --rm -v "$(pwd)":/data -w /data \
 | `--class_parameter_space`           | Insert a space before `#` in parameterized class typedefs (default: `false`). |
 | `-h, --help`                        | Show help and exit.                                            |
 
+The indexing and class-parameter spacing options use syntax parsed from the
+original source. Conditional compilation is checked for up to six distinct
+condition names (64 combinations); external include files are not expanded
+for this check. If the context cannot be determined reliably, for example
+because of a macro expansion, an incomplete construct, or conflicting
+conditional branches, the affected source is preserved and a
+`syntax-context-unavailable` warning is emitted. The same fallback applies
+when the conditional-configuration limit is exceeded.
+
 ### Reserved style options (not yet implemented)
 
 The basic formatting options in the preceding table are implemented.

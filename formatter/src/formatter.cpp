@@ -11,6 +11,7 @@
 #include <utility>
 
 #include "data/format_style.h"
+#include "data/syntax_context.h"
 #include "pipeline/line_joiner.h"
 #include "pipeline/line_wrap_searcher.h"
 #include "pipeline/policy_assigner.h"
@@ -26,10 +27,11 @@ auto format(gsl::span<const slang::parsing::Token> tokens, FormatStyle style,
             std::string_view original_source) -> FormatResult {
   slang::BumpAllocator normalizer_allocator;
   auto normalized_tokens = normalizeTokens(tokens, normalizer_allocator);
+  const auto syntax_context = parseSyntaxContext(original_source, tokens);
   auto unwrapped = TreeUnwrapper(normalized_tokens, style, original_source)
                        .unwrapWithDiagnostics();
   auto annotated = TokenAnnotator(style).annotateWithDiagnostics(
-      unwrapped.lines, original_source);
+      unwrapped.lines, original_source, &syntax_context);
   PolicyAssigner(style).assign(annotated.lines);
   LineJoiner(style).join(annotated.lines);
   align(annotated.lines, style);

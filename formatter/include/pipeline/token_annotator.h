@@ -8,6 +8,7 @@
 #include "data/format_style.h"
 #include "data/format_token.h"
 #include "data/format_warning.h"
+#include "data/syntax_context.h"
 #include "data/unwrapped_line.h"
 
 namespace format {
@@ -27,7 +28,8 @@ class TokenAnnotator {
       -> std::vector<UnwrappedLine<FormatToken>>;
   [[nodiscard]] auto annotateWithDiagnostics(
       const std::vector<UnwrappedLine<slang::parsing::Token>>& lines,
-      std::string_view original_source) -> AnnotationResult;
+      std::string_view original_source,
+      const SyntaxContext* syntax_context = nullptr) -> AnnotationResult;
 
  private:
   // Runs three sequential passes for a single logical line.

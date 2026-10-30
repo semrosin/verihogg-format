@@ -2,6 +2,8 @@
 
 #include <slang/parsing/Token.h>
 
+#include "data/syntax_context.h"
+
 namespace format {
 
 enum class BreakDecision : uint8_t {
@@ -101,6 +103,7 @@ enum class TokenType : uint8_t {
 
 struct FormatToken {
   slang::parsing::Token token{};
+  TokenSyntaxContext syntax{};
   InterTokenInfo before{};
   InterTokenDecision decision{};
   GroupBalancing balancing{GroupBalancing::kNone};
