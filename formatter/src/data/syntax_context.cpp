@@ -74,6 +74,13 @@ using slang::syntax::SyntaxNode;
   return true;
 }
 
+struct TraversalContext {
+  bool in_selection = false;
+  bool in_typedef_type = false;
+  bool in_type_name = false;
+  bool trusted = true;
+};
+
 struct Visitor {
   std::reference_wrapper<std::unordered_map<size_t, TokenSyntaxContext>> tokens;
   slang::BufferID source_buffer;
@@ -159,23 +166,21 @@ struct Visitor {
     context.typedef_class_parameter = typedef_parameter;
   }
 
-  auto visit(const SyntaxNode& node, bool in_selection = false,
-             bool in_typedef_type = false, bool in_type_name = false,
-             bool trusted = true) -> void {
+  auto visit(const SyntaxNode& node, TraversalContext context = {}) -> void {
     if (node.kind == SyntaxKind::ElementSelect ||
         node.kind == SyntaxKind::VariableDimension ||
-        (in_typedef_type && node.kind == SyntaxKind::ClassName)) {
-      trusted = trusted && reliableEnclosingConstruct(node);
+        (context.in_typedef_type && node.kind == SyntaxKind::ClassName)) {
+      context.trusted = context.trusted && reliableEnclosingConstruct(node);
     }
     if (node.kind == SyntaxKind::NamedType) {
-      in_type_name = true;
+      context.in_type_name = true;
     }
     if (node.kind == SyntaxKind::ElementSelect) {
       // Slang uses ElementSelect for dimensions attached to named types too.
       // Expressions inside the dimension can still contain actual selections.
-      in_selection = !in_type_name;
+      context.in_selection = !context.in_type_name;
     } else if (node.kind == SyntaxKind::VariableDimension) {
-      in_selection = false;
+      context.in_selection = false;
     }
 
     const auto* typedef_node =
@@ -185,28 +190,30 @@ struct Visitor {
     const auto* class_node = node.kind == SyntaxKind::ClassName
                                  ? &node.as<slang::syntax::ClassNameSyntax>()
                                  : nullptr;
-    const auto hash =
-        class_node && in_typedef_type ? class_node->parameters->hash : Token{};
+    const auto hash = class_node && context.in_typedef_type
+                          ? class_node->parameters->hash
+                          : Token{};
     for (uint32_t i = 0; i < node.getChildCount(); ++i) {
       if (const auto* child = node.childNode(i)) {
-        visit(*child, in_selection,
-              typedef_node
-                  ? child == typedef_node->type.get() &&
-                        child->kind == SyntaxKind::NamedType
-                  : in_typedef_type &&
-                        node.kind != SyntaxKind::ParameterValueAssignment,
-              node.kind == SyntaxKind::ElementSelect ||
-                      node.kind == SyntaxKind::ParameterValueAssignment
-                  ? false
-                  : in_type_name,
-              trusted);
+        auto child_context = context;
+        if (typedef_node) {
+          child_context.in_typedef_type = child == typedef_node->type.get() &&
+                                          child->kind == SyntaxKind::NamedType;
+        } else if (node.kind == SyntaxKind::ParameterValueAssignment) {
+          child_context.in_typedef_type = false;
+        }
+        if (node.kind == SyntaxKind::ElementSelect ||
+            node.kind == SyntaxKind::ParameterValueAssignment) {
+          child_context.in_type_name = false;
+        }
+        visit(*child, child_context);
       } else if (const auto token = node.childToken(i)) {
-        record(token, in_selection, false, trusted);
+        record(token, context.in_selection, false, context.trusted);
       }
     }
     if (hash) {
       // The hash is a child of ParameterValueAssignment, not ClassName.
-      record(hash, in_selection, true, trusted);
+      record(hash, context.in_selection, true, context.trusted);
     }
   }
 };
