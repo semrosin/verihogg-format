@@ -768,6 +768,13 @@ auto implComputeInterTokenInfo(gsl::span<FormatToken> tokens) -> void {
     return false;
   }
   size_t next = 1;
+  if (next + 1 < tokens.size() && tokens[next].token.kind == TK::Hash &&
+      tokens[next + 1].token.kind == TK::OpenParenthesis &&
+      tokens[next + 1].matching_bracket != nullptr) {
+    next =
+        static_cast<size_t>(tokens[next + 1].matching_bracket - tokens.data()) +
+        1;
+  }
   while (next < tokens.size() && tokens[next].token.kind == TK::OpenBracket &&
          tokens[next].matching_bracket != nullptr) {
     next =

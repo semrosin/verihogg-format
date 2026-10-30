@@ -64,6 +64,8 @@ TEST_F(PrinterTest, CompactIndexingHandlesSelectionsCommentsAndRecovery) {
   const std::string source =
       "module m;\n"
       "  my_type [N-1:0] values;\n"
+      "  my_type#(P) typed [N-1:0];\n"
+      "  logic [sizes[i+1]-1:0] nested;\n"
       "  logic first = values[i+1], second [N-1:0];\n"
       "  assign a = values[i+:W];\n"
       "  assign b = values[sel?i+1:j-1];\n"
@@ -75,6 +77,8 @@ TEST_F(PrinterTest, CompactIndexingHandlesSelectionsCommentsAndRecovery) {
   style.compact_indexing_and_selections = true;
   const auto compact = formatText(source, style);
   EXPECT_NE(compact.find("my_type [N - 1 : 0] values;"), std::string::npos);
+  EXPECT_NE(compact.find("typed [N - 1 : 0]"), std::string::npos);
+  EXPECT_NE(compact.find("sizes [i+1] - 1 : 0"), std::string::npos);
   EXPECT_NE(compact.find("second [N - 1 : 0]"), std::string::npos);
   EXPECT_NE(compact.find("values [i+:W]"), std::string::npos);
   EXPECT_NE(compact.find("values [sel ? i+1 : j-1]"), std::string::npos);
