@@ -124,6 +124,7 @@ docker run --rm -v "$(pwd)":/data -w /data \
 | `-t, --line_terminator MODE`        | Line ending style: `auto` \| `lf` \| `crlf` (default: `auto`). |
 | `--config PATH`                     | Use this configuration file instead of searching for one.      |
 | `--compact_indexing_and_selections` | Compact binary operators inside indexes and selections (default: `true`). |
+| `--class_parameter_space`           | Insert a space before `#` in parameterized class typedefs (default: `false`). |
 | `-h, --help`                        | Show help and exit.                                            |
 
 ### Reserved style options (not yet implemented)
@@ -161,7 +162,6 @@ the command line overrides the value stored from the configuration file.
 | `--alignment_group_boundary RULE`            | Rule determining where an alignment group ends.                                                      |
 | `--port_declarations_right_align_packed_dimensions`   | Right-align packed dimensions in port declarations (default: `false`).                      |
 | `--port_declarations_right_align_unpacked_dimensions` | Right-align unpacked dimensions in port declarations (default: `false`).                    |
-| `--class_parameter_space`                    | Insert a space before `#` in parameterized class typedefs (default: `false`).                        |
 | `--expand_coverpoints`                       | Always expand coverpoints (default: `false`).                                                        |
 | `--try_wrap_long_lines`                      | Allow optimization-based wrapping of long lines (default: `false`).                                  |
 | `--wrap_end_else_clauses`                    | Place `end` and `else` clauses on separate lines (default: `false`).                                 |

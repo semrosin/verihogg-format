@@ -826,6 +826,25 @@ auto compactIndexExpressions(gsl::span<FormatToken> tokens) -> void {
   }
 }
 
+auto applyClassParameterSpacing(gsl::span<FormatToken> tokens, bool spaced)
+    -> void {
+  if (tokens.empty() || tokens.front().token.kind != TK::TypedefKeyword) {
+    return;
+  }
+  for (size_t i = 1; i + 1 < tokens.size(); ++i) {
+    if (tokens[i].token.kind != TK::Hash ||
+        tokens[i - 1].token.kind != TK::Identifier ||
+        tokens[i + 1].token.kind != TK::OpenParenthesis ||
+        tokens[i - 1].token.rawText().starts_with('\\')) {
+      continue;
+    }
+    tokens[i].before.spaces_required = spaced ? 1 : 0;
+    if (!spaced) {
+      tokens[i].before.break_decision = BreakDecision::kMustNotBreak;
+    }
+  }
+}
+
 }  // namespace
 
 // ---------------------------------------------------------------------------
@@ -839,6 +858,7 @@ auto TokenAnnotator::annotateSpan(gsl::span<FormatToken> tokens) const -> void {
   if (style.get().compact_indexing_and_selections) {
     compactIndexExpressions(tokens);
   }
+  applyClassParameterSpacing(tokens, style.get().class_parameter_space);
 }
 
 auto TokenAnnotator::annotateUnwrappedLine(

@@ -84,6 +84,56 @@ TEST_F(PrinterTest, CompactIndexingHandlesSelectionsCommentsAndRecovery) {
   EXPECT_EQ(formatText(compact, style), compact);
 }
 
+TEST_F(PrinterTest, ClassParameterSpaceAppliesOnlyToTypedefs) {
+  const std::string source =
+      "module m #(parameter N = 2);\n"
+      "  typedef foo #(N) foo_t;\n"
+      "  typedef bar#(N) bar_t;\n"
+      "  foo #(N) inst();\n"
+      "  initial #1 x = 0;\n"
+      "endmodule\n";
+  auto style = format::FormatStyle::defaults();
+  style.class_parameter_space = false;
+  const auto compact = formatText(source, style);
+  EXPECT_NE(compact.find("foo#(N)"), std::string::npos);
+  EXPECT_NE(compact.find("bar#(N)"), std::string::npos);
+  EXPECT_NE(compact.find("#1 x"), std::string::npos);
+  EXPECT_EQ(formatText(compact, style), compact);
+
+  style.class_parameter_space = true;
+  const auto spaced = formatText(source, style);
+  EXPECT_NE(spaced.find("foo #(N)"), std::string::npos);
+  EXPECT_NE(spaced.find("bar #(N)"), std::string::npos);
+  EXPECT_NE(spaced.find("#1 x"), std::string::npos);
+  EXPECT_EQ(formatText(spaced, style), spaced);
+
+  // Outside the typedef, both settings must produce the same text.
+  EXPECT_EQ(compact.substr(0, compact.find("  typedef")),
+            spaced.substr(0, spaced.find("  typedef")));
+  const auto compact_typedefs_end = compact.find("\n  foo #(\n");
+  const auto spaced_typedefs_end = spaced.find("\n  foo #(\n");
+  ASSERT_NE(compact_typedefs_end, std::string::npos);
+  ASSERT_NE(spaced_typedefs_end, std::string::npos);
+  EXPECT_EQ(compact.substr(compact_typedefs_end),
+            spaced.substr(spaced_typedefs_end));
+}
+
+TEST_F(PrinterTest, ClassParameterSpacePreservesEscapedIdentifiersAndComments) {
+  const std::string source =
+      "module m;\n"
+      "  typedef \\foo #(N) escaped_t;\n"
+      "  typedef bar /* keep */ #(N) commented_t;\n"
+      "endmodule\n";
+  auto style = format::FormatStyle::defaults();
+  for (const bool spaced : {false, true}) {
+    style.class_parameter_space = spaced;
+    const auto formatted = formatText(source, style);
+    EXPECT_NE(formatted.find("\\foo #(N)"), std::string::npos);
+    EXPECT_NE(formatted.find("/* keep */"), std::string::npos);
+    EXPECT_EQ(formatText(formatted, style), formatted);
+  }
+}
+
 TEST_F(PrinterTest, KeepsWhitespaceAfterEscapedIdentifiers) {
   EXPECT_EQ(formatText("module m; reg \\foo ; assign x = \\foo ; endmodule"),
             "module m;\n"

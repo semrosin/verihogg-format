@@ -113,7 +113,16 @@ struct AlignmentGroup {
       }
       continue;
     }
-    if (is_suffix_token(ft) || (i > 0 && ft.before.spaces_required == 0)) {
+    // A parameterized typedef's type name and parameter list form one cell;
+    // the space before '#' belongs to the class_parameter_space option.
+    const bool typedef_parameters =
+        i > 0 &&
+        tokens.front().token.kind ==
+            slang::parsing::TokenKind::TypedefKeyword &&
+        ft.token.kind == slang::parsing::TokenKind::Hash &&
+        tokens.at(i - 1).token.kind == slang::parsing::TokenKind::Identifier;
+    if (is_suffix_token(ft) || typedef_parameters ||
+        (i > 0 && ft.before.spaces_required == 0)) {
       ++i;
       continue;
     }

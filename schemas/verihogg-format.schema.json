@@ -271,7 +271,7 @@
 
     "class_parameter_space": {
       "type": "boolean",
-      "description": "Insert a space before # in parameterized class typedefs. Not implemented yet: accepted and stored, but has no effect on formatting.",
+      "description": "Insert a space before # in parameterized class typedefs.",
       "default": false
     },
 

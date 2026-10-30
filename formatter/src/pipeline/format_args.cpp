@@ -69,6 +69,8 @@ Formatting options:
   -n, --inplace                        Overwrite source files instead of stdout
       --compact_indexing_and_selections   Compact binary expressions in indexes (default: true)
       --no_compact_indexing_and_selections  Disable compact indexing
+      --class_parameter_space          Insert a space before # in parameterized class typedefs
+      --no_class_parameter_space       Remove that space (default)
 
 The style options below are reserved and do not affect formatting yet.
 Line-wrap search currently always runs, regardless of --try_wrap_long_lines.
@@ -100,7 +102,6 @@ Alignment grouping:
 Boolean options (use --no_<name> to disable):
       --port_declarations_right_align_packed_dimensions
       --port_declarations_right_align_unpacked_dimensions
-      --class_parameter_space
       --expand_coverpoints
       --try_wrap_long_lines
       --wrap_end_else_clauses
