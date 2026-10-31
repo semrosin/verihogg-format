@@ -2,7 +2,10 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <optional>
 #include <string_view>
+
+#include "pipeline/alignment_layout.h"
 
 namespace format {
 
@@ -244,80 +247,91 @@ struct AlignmentGroup {
   return kMinColumnGap;
 }
 
-static void apply_group(AlignmentGroup& group,
-                        std::vector<UnwrappedLine<FormatToken>>& lines,
-                        const FormatStyle& style) {
+struct GroupPlacement {
+  std::vector<std::vector<size_t>> spaces;
+  std::vector<size_t> end_columns;
+  size_t comment_column = 0;
+  bool any_comment = false;
+};
+
+[[nodiscard]] static auto calculate_group_placement(
+    const AlignmentGroup& group,
+    const std::vector<UnwrappedLine<FormatToken>>& lines,
+    const FormatStyle& style) -> std::optional<GroupPlacement> {
   if (group.line_indices.size() < kMinGroupSize) {
-    return;
+    return std::nullopt;
   }
-
-  std::vector<size_t> column_offset(group.num_columns, 0);
+  std::vector<size_t> gaps(group.num_columns, 0);
   for (size_t c = 1; c < group.num_columns; ++c) {
-    const size_t gap = gap_before_column(group, lines, c);
-    column_offset.at(c) =
-        column_offset.at(c - 1) + group.col_max_width.at(c - 1) + gap;
+    gaps.at(c) = gap_before_column(group, lines, c);
   }
-
-  const size_t formatted_code_width =
-      column_offset.empty() ? 0
-                            : column_offset.back() + group.col_max_width.back();
-
+  const auto layout = alignment::calculateLayout(group.col_max_width, gaps);
+  if (layout.offsets.size() != group.num_columns) {
+    return std::nullopt;
+  }
   size_t max_total_width = 0;
   for (size_t line_i : group.line_indices) {
     const size_t indent = lines.at(line_i).indentation_spaces;
-    max_total_width = std::max(max_total_width, indent + formatted_code_width);
+    max_total_width = std::max(max_total_width, indent + layout.width);
+  }
+  if (max_total_width > style.column_limit) {
+    return std::nullopt;
   }
 
-  if (max_total_width > style.column_limit) {
+  GroupPlacement placement;
+  placement.comment_column = max_total_width + kCommentColumnGap;
+  for (size_t line_i : group.line_indices) {
+    placement.any_comment = placement.any_comment || has_comment(lines, line_i);
+  }
+  for (size_t row_i = 0; row_i < group.line_indices.size(); ++row_i) {
+    const auto& line = lines.at(group.line_indices.at(row_i));
+    const auto& row = group.table.at(row_i);
+    auto& spaces = placement.spaces.emplace_back(row.size(), 0);
+    size_t cursor = line.indentation_spaces;
+    for (size_t c = 0; c < row.size(); ++c) {
+      const AlignmentCell& cell = row.at(c);
+      if (c == 0) {
+        cursor = line.indentation_spaces + cell.width;
+        continue;
+      }
+      const size_t target_abs = line.indentation_spaces + layout.offsets.at(c);
+      spaces.at(c) = (target_abs > cursor) ? (target_abs - cursor) : 1;
+      cursor = target_abs + cell.width;
+    }
+    placement.end_columns.push_back(cursor);
+  }
+  return placement;
+}
+
+static void apply_group(const AlignmentGroup& group,
+                        std::vector<UnwrappedLine<FormatToken>>& lines,
+                        const FormatStyle& style) {
+  const auto placement = calculate_group_placement(group, lines, style);
+  if (!placement) {
     return;
   }
-
-  const size_t comment_column = max_total_width + kCommentColumnGap;
-  bool any_comment = false;
-  for (size_t line_i : group.line_indices) {
-    if (has_comment(lines, line_i)) {
-      any_comment = true;
-      break;
-    }
-  }
-
   for (size_t row_i = 0; row_i < group.line_indices.size(); ++row_i) {
     const size_t line_i = group.line_indices.at(row_i);
     auto& line = lines.at(line_i);
     auto& tokens = line.tokens;
     const AlignmentRow& row = group.table.at(row_i);
-
-    size_t cursor = line.indentation_spaces;
-
-    for (size_t c = 0; c < row.size(); ++c) {
+    for (size_t c = 1; c < row.size(); ++c) {
       const AlignmentCell& cell = row.at(c);
-
-      if (c == 0) {
-        cursor = line.indentation_spaces + cell.width;
-        continue;
-      }
-      const size_t target_abs = line.indentation_spaces + column_offset.at(c);
-      const size_t spaces = (target_abs > cursor) ? (target_abs - cursor) : 1;
-
-      FormatToken& first = tokens.at(cell.start_idx);
-      first.before.spaces_required = spaces;
-
-      cursor = target_abs + cell.width;
-
-      if (group.policy == PartitionPolicy::kAssignmentAlignment && c == 1) {
-        if (cell.start_idx + 1 < tokens.size()) {
-          tokens.at(cell.start_idx + 1).before.spaces_required =
-              kMinSpacesAfterAssignment;
-        }
+      tokens.at(cell.start_idx).before.spaces_required =
+          placement->spaces.at(row_i).at(c);
+      if (group.policy == PartitionPolicy::kAssignmentAlignment && c == 1 &&
+          cell.start_idx + 1 < tokens.size()) {
+        tokens.at(cell.start_idx + 1).before.spaces_required =
+            kMinSpacesAfterAssignment;
       }
     }
-    if (any_comment) {
+    if (placement->any_comment) {
       const size_t next_i = line_i + 1;
       if (next_i < lines.size() && !lines.at(next_i).tokens.empty()) {
-        const size_t spaces = (comment_column > cursor)
-                                  ? (comment_column - cursor)
+        const size_t cursor = placement->end_columns.at(row_i);
+        const size_t spaces = (placement->comment_column > cursor)
+                                  ? (placement->comment_column - cursor)
                                   : kCommentColumnGap;
-
         lines.at(next_i).tokens.at(0).before.comment_spaces = spaces;
       }
     }
