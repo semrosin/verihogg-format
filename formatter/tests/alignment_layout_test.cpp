@@ -120,6 +120,13 @@ TEST(AlignmentPolicyTest, ExplicitColumnGapsDoNotChangeFlushLeftSpacing) {
 
   group.alignment_gaps = std::vector<size_t>{0};
   EXPECT_FALSE(applyPolicy(group, AlignmentPolicy::kAlign, kColumnLimit));
+
+  group.alignment_gaps.clear();
+  result = applyPolicy(group, AlignmentPolicy::kAlign, kColumnLimit);
+  ASSERT_TRUE(result);
+  ASSERT_TRUE(std::holds_alternative<FormatSpacing>(*result));
+  EXPECT_EQ(std::get<FormatSpacing>(*result).spaces,
+            (std::vector<std::vector<size_t>>{{0, 8}, {0, 7}}));
 }
 
 TEST(AlignmentPolicyTest, InferMatchesVeribleThresholds) {
