@@ -3,7 +3,6 @@
 #include <gtest/gtest.h>
 
 #include <array>
-#include <limits>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -43,7 +42,7 @@ auto makeGroup(std::string_view source,
   return group;
 }
 
-TEST(AlignmentLayoutTest, CalculatesOffsetsAndDetectsOverflow) {
+TEST(AlignmentLayoutTest, CalculatesOffsetsAndRejectsMismatchedInputs) {
   const auto layout = calculateLayout({3, 5, 2}, {0, 1, 2});
   ASSERT_TRUE(layout);
   EXPECT_EQ(layout->offsets, (std::vector<size_t>{0, 4, 11}));
@@ -54,10 +53,6 @@ TEST(AlignmentLayoutTest, CalculatesOffsetsAndDetectsOverflow) {
   EXPECT_TRUE(empty->offsets.empty());
   EXPECT_EQ(empty->width, 0);
   EXPECT_FALSE(calculateLayout({1}, {}));
-  EXPECT_FALSE(
-      calculateLayout({std::numeric_limits<size_t>::max(), 1}, {0, 1}));
-  EXPECT_FALSE(
-      calculateLayout({std::numeric_limits<size_t>::max(), 1}, {0, 0}));
 }
 
 TEST(AlignmentPolicyTest, AlignAndFlushLeftUseProvidedCellsAndMinimumSpacing) {

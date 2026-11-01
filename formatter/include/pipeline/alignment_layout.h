@@ -13,7 +13,7 @@ namespace format::alignment {
 
 // A parser-independent table calculation. Gaps are indexed by column, with
 // the first gap unused. Widths do not include the gap before a cell.
-// Returns no layout for mismatched input sizes or arithmetic overflow.
+// Returns no layout for mismatched input sizes.
 struct Layout {
   std::vector<size_t> offsets;
   size_t width = 0;

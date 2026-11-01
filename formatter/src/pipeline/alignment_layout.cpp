@@ -1,20 +1,11 @@
 #include "pipeline/alignment_layout.h"
 
 #include <algorithm>
-#include <limits>
 #include <utility>
 
 namespace format::alignment {
 
 namespace {
-
-[[nodiscard]] auto add(size_t a, size_t b, size_t& result) -> bool {
-  if (b > std::numeric_limits<size_t>::max() - a) {
-    return false;
-  }
-  result = a + b;
-  return true;
-}
 
 [[nodiscard]] auto validGroup(const Group& group) -> bool {
   if (group.rows.empty()) {
@@ -85,15 +76,11 @@ auto calculateLayout(const std::vector<size_t>& widths,
   }
   Layout result{.offsets = std::vector<size_t>(widths.size(), 0), .width = 0};
   for (size_t i = 1; i < widths.size(); ++i) {
-    size_t previous_end = 0;
-    if (!add(result.offsets.at(i - 1), widths.at(i - 1), previous_end) ||
-        !add(previous_end, gaps.at(i), result.offsets.at(i))) {
-      return std::nullopt;
-    }
+    result.offsets.at(i) =
+        result.offsets.at(i - 1) + widths.at(i - 1) + gaps.at(i);
   }
-  if (!widths.empty() &&
-      !add(result.offsets.back(), widths.back(), result.width)) {
-    return std::nullopt;
+  if (!widths.empty()) {
+    result.width = result.offsets.back() + widths.back();
   }
   return result;
 }
@@ -147,13 +134,10 @@ auto applyPolicy(const Group& group, AlignmentPolicy policy,
       const auto cell = row.cells.at(c);
       size_t width = 0;
       for (size_t i = cell.begin; i < cell.end; ++i) {
-        if (i != cell.begin &&
-            !add(width, row.tokens.at(i).min_spaces, width)) {
-          return std::nullopt;
+        if (i != cell.begin) {
+          width += row.tokens.at(i).min_spaces;
         }
-        if (!add(width, row.tokens.at(i).text.size(), width)) {
-          return std::nullopt;
-        }
+        width += row.tokens.at(i).text.size();
       }
       current_widths.push_back(width);
       widths.at(c) = std::max(widths.at(c), width);
@@ -174,10 +158,7 @@ auto applyPolicy(const Group& group, AlignmentPolicy policy,
   auto aligned = result.spaces;
   for (size_t r = 0; r < group.rows.size(); ++r) {
     const auto& row = group.rows.at(r);
-    size_t total_width = 0;
-    if (!add(row.indentation, layout->width, total_width)) {
-      return std::nullopt;
-    }
+    const size_t total_width = row.indentation + layout->width;
     if (group.rows.size() >= 2 && total_width > column_limit) {
       fits = false;
     }
