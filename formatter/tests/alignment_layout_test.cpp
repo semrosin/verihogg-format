@@ -103,20 +103,27 @@ TEST(AlignmentPolicyTest, PreserveReturnsExactSourceAndRejectsInvalidOffsets) {
 }
 
 TEST(AlignmentPolicyTest, ExplicitColumnGapsDoNotChangeFlushLeftSpacing) {
+  constexpr size_t kMinimumSpaces = 7;
   auto group = makeGroup("int W\ntype T", {"int", "type"});
-  group.rows.at(0).tokens.at(1).min_spaces = 7;
+  group.rows.at(0).tokens.at(1).min_spaces = kMinimumSpaces;
   group.alignment_gaps = std::vector<size_t>{0, 4};
   auto result = applyPolicy(group, AlignmentPolicy::kAlign, kColumnLimit);
   ASSERT_TRUE(result);
+  if (!result) {
+    return;
+  }
   ASSERT_TRUE(std::holds_alternative<FormatSpacing>(*result));
   EXPECT_EQ(std::get<FormatSpacing>(*result).spaces,
             (std::vector<std::vector<size_t>>{{0, 5}, {0, 4}}));
 
   result = applyPolicy(group, AlignmentPolicy::kFlushLeft, kColumnLimit);
   ASSERT_TRUE(result);
+  if (!result) {
+    return;
+  }
   ASSERT_TRUE(std::holds_alternative<FormatSpacing>(*result));
   EXPECT_EQ(std::get<FormatSpacing>(*result).spaces,
-            (std::vector<std::vector<size_t>>{{0, 7}, {0, 1}}));
+            (std::vector<std::vector<size_t>>{{0, kMinimumSpaces}, {0, 1}}));
 
   group.alignment_gaps = std::vector<size_t>{0};
   EXPECT_FALSE(applyPolicy(group, AlignmentPolicy::kAlign, kColumnLimit));
@@ -124,9 +131,13 @@ TEST(AlignmentPolicyTest, ExplicitColumnGapsDoNotChangeFlushLeftSpacing) {
   group.alignment_gaps.clear();
   result = applyPolicy(group, AlignmentPolicy::kAlign, kColumnLimit);
   ASSERT_TRUE(result);
+  if (!result) {
+    return;
+  }
   ASSERT_TRUE(std::holds_alternative<FormatSpacing>(*result));
   EXPECT_EQ(std::get<FormatSpacing>(*result).spaces,
-            (std::vector<std::vector<size_t>>{{0, 8}, {0, 7}}));
+            (std::vector<std::vector<size_t>>{{0, kMinimumSpaces + 1},
+                                              {0, kMinimumSpaces}}));
 }
 
 TEST(AlignmentPolicyTest, InferMatchesVeribleThresholds) {
