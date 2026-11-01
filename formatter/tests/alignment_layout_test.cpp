@@ -45,11 +45,17 @@ auto makeGroup(std::string_view source,
 TEST(AlignmentLayoutTest, CalculatesOffsetsAndRejectsMismatchedInputs) {
   const auto layout = calculateLayout({3, 5, 2}, {0, 1, 2});
   ASSERT_TRUE(layout);
+  if (!layout) {
+    return;
+  }
   EXPECT_EQ(layout->offsets, (std::vector<size_t>{0, 4, 11}));
   EXPECT_EQ(layout->width, 13);
 
   const auto empty = calculateLayout({}, {});
   ASSERT_TRUE(empty);
+  if (!empty) {
+    return;
+  }
   EXPECT_TRUE(empty->offsets.empty());
   EXPECT_EQ(empty->width, 0);
   EXPECT_FALSE(calculateLayout({1}, {}));
