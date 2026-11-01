@@ -52,6 +52,8 @@ namespace {
   size_t end = 0;
   for (const auto& row : group.rows) {
     for (const auto& token : row.tokens) {
+      // The offset must be present (zero is valid), ordered, and in bounds.
+      // Gaps must contain only whitespace, and token text must match source.
       if (!token.source_offset || token.source_offset.value_or(0) < end ||
           token.source_offset.value_or(0) > source.size() ||
           token.text.size() > source.size() - token.source_offset.value_or(0) ||
