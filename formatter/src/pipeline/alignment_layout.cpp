@@ -92,20 +92,6 @@ auto applyPolicy(const Group& group, AlignmentPolicy policy,
   if (!validGroup(group)) {
     return std::nullopt;
   }
-  FormatSpacing result;
-  if (group.rows.empty()) {
-    if (policy == AlignmentPolicy::kPreserve ||
-        policy == AlignmentPolicy::kInfer) {
-      if (!validSource(group)) {
-        return std::nullopt;
-      }
-      if (policy == AlignmentPolicy::kPreserve) {
-        return PreserveSource{
-            std::string(group.original_text.value_or(std::string_view{}))};
-      }
-    }
-    return result;
-  }
   if ((policy == AlignmentPolicy::kPreserve ||
        policy == AlignmentPolicy::kInfer) &&
       !validSource(group)) {
@@ -116,6 +102,10 @@ auto applyPolicy(const Group& group, AlignmentPolicy policy,
         std::string(group.original_text.value_or(std::string_view{}))};
   }
 
+  FormatSpacing result;
+  if (group.rows.empty()) {
+    return result;
+  }
   for (const auto& row : group.rows) {
     for (const auto& token : row.tokens) {
       if (token.text.find_first_of("\r\n") != std::string_view::npos) {
@@ -123,14 +113,17 @@ auto applyPolicy(const Group& group, AlignmentPolicy policy,
       }
     }
   }
+
   const size_t count = group.rows.front().cells.size();
   std::vector<size_t> widths(count, 0), gaps(count, 0);
   std::vector<std::vector<size_t>> row_widths;
+
   for (const auto& row : group.rows) {
     auto& spaces = result.spaces.emplace_back();
     for (const auto& token : row.tokens) {
       spaces.push_back(token.min_spaces);
     }
+
     auto& current_widths = row_widths.emplace_back();
     for (size_t c = 0; c < count; ++c) {
       const auto cell = row.cells.at(c);
@@ -142,12 +135,14 @@ auto applyPolicy(const Group& group, AlignmentPolicy policy,
         width += row.tokens.at(i).text.size();
       }
       current_widths.push_back(width);
+
       widths.at(c) = std::max(widths.at(c), width);
       if (c > 0) {
         gaps.at(c) = std::max(gaps.at(c), row.tokens.at(cell.begin).min_spaces);
       }
     }
   }
+
   if (policy == AlignmentPolicy::kFlushLeft) {
     return result;
   }
@@ -155,15 +150,17 @@ auto applyPolicy(const Group& group, AlignmentPolicy policy,
   if (!layout) {
     return std::nullopt;
   }
+
   size_t max_delta = 0;
   bool fits = true;
   auto aligned = result.spaces;
   for (size_t r = 0; r < group.rows.size(); ++r) {
     const auto& row = group.rows.at(r);
     const size_t total_width = row.indentation + layout->width;
-    if (group.rows.size() >= 2 && total_width > column_limit) {
+    if (group.rows.size() > 1 && total_width > column_limit) {
       fits = false;
     }
+
     for (size_t c = 1; c < count; ++c) {
       const size_t prev_end =
           layout->offsets.at(c - 1) + row_widths.at(r).at(c - 1);
@@ -206,7 +203,7 @@ auto applyPolicy(const Group& group, AlignmentPolicy policy,
       return PreserveSource{std::string(source)};
     }
   }
-  if (policy == AlignmentPolicy::kAlign && group.rows.size() >= 2) {
+  if (policy == AlignmentPolicy::kAlign && group.rows.size() > 1) {
     if (!fits) {
       return std::nullopt;
     }
