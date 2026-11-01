@@ -46,6 +46,9 @@ struct Group {
   std::vector<Row> rows;
   // Exact source range containing the tokens, comments included as tokens.
   std::optional<std::string_view> original_text;
+  // Exact alignment gaps by column; the first entry is unused. These override
+  // cell minimums for alignment only. If absent, gaps come from cell minimums.
+  std::optional<std::vector<size_t>> alignment_gaps;
 };
 
 // Minimum or aligned spaces before each token, indexed by row and token.

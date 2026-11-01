@@ -9,10 +9,11 @@ namespace {
 
 [[nodiscard]] auto validGroup(const Group& group) -> bool {
   if (group.rows.empty()) {
-    return true;
+    return !group.alignment_gaps || group.alignment_gaps->empty();
   }
   const size_t count = group.rows.front().cells.size();
-  if (count == 0) {
+  if (count == 0 ||
+      (group.alignment_gaps && group.alignment_gaps->size() != count)) {
     return false;
   }
   for (const auto& row : group.rows) {
@@ -143,6 +144,9 @@ auto applyPolicy(const Group& group, AlignmentPolicy policy,
     }
   }
 
+  if (group.alignment_gaps) {
+    gaps = *group.alignment_gaps;
+  }
   if (policy == AlignmentPolicy::kFlushLeft) {
     return result;
   }
