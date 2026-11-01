@@ -45,6 +45,7 @@ auto makeGroup(std::string_view source,
 TEST(AlignmentLayoutTest, CalculatesOffsetsAndRejectsMismatchedInputs) {
   const auto layout = calculateLayout({3, 5, 2}, {0, 1, 2});
   ASSERT_TRUE(layout);
+  // clang-tidy needs an explicit check before accessing the optional.
   if (!layout) {
     return;
   }
@@ -53,6 +54,7 @@ TEST(AlignmentLayoutTest, CalculatesOffsetsAndRejectsMismatchedInputs) {
 
   const auto empty = calculateLayout({}, {});
   ASSERT_TRUE(empty);
+  // clang-tidy needs an explicit check before accessing the optional.
   if (!empty) {
     return;
   }
@@ -66,6 +68,7 @@ TEST(AlignmentPolicyTest, AlignAndFlushLeftUseProvidedCellsAndMinimumSpacing) {
   const auto aligned =
       applyPolicy(group, AlignmentPolicy::kAlign, kColumnLimit);
   ASSERT_TRUE(aligned);
+  // clang-tidy needs an explicit check before accessing the optional.
   if (!aligned) {
     return;
   }
@@ -75,6 +78,7 @@ TEST(AlignmentPolicyTest, AlignAndFlushLeftUseProvidedCellsAndMinimumSpacing) {
   EXPECT_EQ(std::get<FormatSpacing>(*aligned).alignment_width, 6);
   const auto flushed = applyPolicy(group, AlignmentPolicy::kFlushLeft, 1);
   ASSERT_TRUE(flushed);
+  // clang-tidy needs an explicit check before accessing the optional.
   if (!flushed) {
     return;
   }
@@ -91,6 +95,7 @@ TEST(AlignmentPolicyTest, PreserveReturnsExactSourceAndRejectsInvalidOffsets) {
   auto group = makeGroup(source, {"int", "type"});
   const auto result = applyPolicy(group, AlignmentPolicy::kPreserve, 1);
   ASSERT_TRUE(result);
+  // clang-tidy needs an explicit check before accessing the optional.
   if (!result) {
     return;
   }
@@ -109,6 +114,7 @@ TEST(AlignmentPolicyTest, ExplicitColumnGapsDoNotChangeFlushLeftSpacing) {
   group.alignment_gaps = std::vector<size_t>{0, 4};
   auto result = applyPolicy(group, AlignmentPolicy::kAlign, kColumnLimit);
   ASSERT_TRUE(result);
+  // clang-tidy needs an explicit check before accessing the optional.
   if (!result) {
     return;
   }
@@ -118,6 +124,7 @@ TEST(AlignmentPolicyTest, ExplicitColumnGapsDoNotChangeFlushLeftSpacing) {
 
   result = applyPolicy(group, AlignmentPolicy::kFlushLeft, kColumnLimit);
   ASSERT_TRUE(result);
+  // clang-tidy needs an explicit check before accessing the optional.
   if (!result) {
     return;
   }
@@ -131,6 +138,7 @@ TEST(AlignmentPolicyTest, ExplicitColumnGapsDoNotChangeFlushLeftSpacing) {
   group.alignment_gaps.clear();
   result = applyPolicy(group, AlignmentPolicy::kAlign, kColumnLimit);
   ASSERT_TRUE(result);
+  // clang-tidy needs an explicit check before accessing the optional.
   if (!result) {
     return;
   }
@@ -144,6 +152,7 @@ TEST(AlignmentPolicyTest, InferMatchesVeribleThresholds) {
   auto small = makeGroup("int W\ntype T", {"int", "type"});
   auto result = applyPolicy(small, AlignmentPolicy::kInfer, kColumnLimit);
   ASSERT_TRUE(result);
+  // clang-tidy needs an explicit check before accessing the optional.
   if (!result) {
     return;
   }
@@ -155,6 +164,7 @@ TEST(AlignmentPolicyTest, InferMatchesVeribleThresholds) {
       makeGroup("int   W\nsome_long_name T", {"int", "some_long_name"});
   result = applyPolicy(flush, AlignmentPolicy::kInfer, kColumnLimit);
   ASSERT_TRUE(result);
+  // clang-tidy needs an explicit check before accessing the optional.
   if (!result) {
     return;
   }
@@ -163,6 +173,7 @@ TEST(AlignmentPolicyTest, InferMatchesVeribleThresholds) {
             (std::vector<std::vector<size_t>>{{0, 1}, {0, 1}}));
   result = applyPolicy(flush, AlignmentPolicy::kInfer, kNarrowColumnLimit);
   ASSERT_TRUE(result);
+  // clang-tidy needs an explicit check before accessing the optional.
   if (!result) {
     return;
   }
@@ -174,6 +185,7 @@ TEST(AlignmentPolicyTest, InferMatchesVeribleThresholds) {
   auto preserve = makeGroup(ambiguous, {"int", "some_long_name"});
   result = applyPolicy(preserve, AlignmentPolicy::kInfer, kColumnLimit);
   ASSERT_TRUE(result);
+  // clang-tidy needs an explicit check before accessing the optional.
   if (!result) {
     return;
   }
@@ -184,6 +196,7 @@ TEST(AlignmentPolicyTest, InferMatchesVeribleThresholds) {
       makeGroup("int     W\nsome_long_name T", {"int", "some_long_name"});
   result = applyPolicy(align, AlignmentPolicy::kInfer, kColumnLimit);
   ASSERT_TRUE(result);
+  // clang-tidy needs an explicit check before accessing the optional.
   if (!result) {
     return;
   }
@@ -203,6 +216,7 @@ TEST(AlignmentPolicyTest, PreservesMultilineCommentsAsSourceTokens) {
       .original_text = source};
   const auto result = applyPolicy(group, AlignmentPolicy::kPreserve, 1);
   ASSERT_TRUE(result);
+  // clang-tidy needs an explicit check before accessing the optional.
   if (!result) {
     return;
   }
@@ -219,6 +233,7 @@ TEST(AlignmentPolicyTest, EmptySingleInvalidAndMultilineInputs) {
   single.rows.pop_back();
   const auto result = applyPolicy(single, AlignmentPolicy::kAlign, 1);
   ASSERT_TRUE(result);
+  // clang-tidy needs an explicit check before accessing the optional.
   if (!result) {
     return;
   }
