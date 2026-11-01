@@ -72,6 +72,7 @@ TEST(AlignmentPolicyTest, AlignAndFlushLeftUseProvidedCellsAndMinimumSpacing) {
   ASSERT_TRUE(std::holds_alternative<FormatSpacing>(*aligned));
   EXPECT_EQ(std::get<FormatSpacing>(*aligned).spaces,
             (std::vector<std::vector<size_t>>{{0, 2}, {0, 1}}));
+  EXPECT_EQ(std::get<FormatSpacing>(*aligned).alignment_width, 6);
   const auto flushed = applyPolicy(group, AlignmentPolicy::kFlushLeft, 1);
   ASSERT_TRUE(flushed);
   if (!flushed) {
@@ -80,6 +81,7 @@ TEST(AlignmentPolicyTest, AlignAndFlushLeftUseProvidedCellsAndMinimumSpacing) {
   ASSERT_TRUE(std::holds_alternative<FormatSpacing>(*flushed));
   EXPECT_EQ(std::get<FormatSpacing>(*flushed).spaces,
             (std::vector<std::vector<size_t>>{{0, 1}, {0, 1}}));
+  EXPECT_FALSE(std::get<FormatSpacing>(*flushed).alignment_width);
   EXPECT_FALSE(applyPolicy(group, AlignmentPolicy::kAlign, 7));
   EXPECT_EQ(group.rows.at(0).tokens.at(1).min_spaces, 1);
 }
@@ -204,6 +206,7 @@ TEST(AlignmentPolicyTest, EmptySingleInvalidAndMultilineInputs) {
   }
   ASSERT_TRUE(std::holds_alternative<FormatSpacing>(*result));
   EXPECT_EQ(std::get<FormatSpacing>(*result).spaces.at(0).at(1), 1);
+  EXPECT_FALSE(std::get<FormatSpacing>(*result).alignment_width);
   single.rows.at(0).cells.at(1) = {0, 2};
   EXPECT_FALSE(applyPolicy(single, AlignmentPolicy::kAlign, kColumnLimit));
 

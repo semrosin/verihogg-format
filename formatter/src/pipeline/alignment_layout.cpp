@@ -212,6 +212,7 @@ auto applyPolicy(const Group& group, AlignmentPolicy policy,
       return std::nullopt;
     }
     result.spaces = std::move(aligned);
+    result.alignment_width = layout->width;
   }
   return result;
 }

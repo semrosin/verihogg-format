@@ -54,6 +54,8 @@ struct Group {
 // Minimum or aligned spaces before each token, indexed by row and token.
 struct FormatSpacing {
   std::vector<std::vector<size_t>> spaces;
+  // Width of the shared layout when alignment was applied to multiple rows.
+  std::optional<size_t> alignment_width;
 };
 
 // The caller must output this exact source range.
