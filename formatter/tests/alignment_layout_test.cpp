@@ -45,11 +45,19 @@ auto makeGroup(std::string_view source,
 
 TEST(AlignmentLayoutTest, CalculatesOffsetsAndDetectsOverflow) {
   const auto layout = calculateLayout({3, 5, 2}, {0, 1, 2});
-  EXPECT_EQ(layout.offsets, (std::vector<size_t>{0, 4, 11}));
-  EXPECT_EQ(layout.width, 13);
-  EXPECT_TRUE(calculateLayout({1}, {}).offsets.empty());
-  EXPECT_TRUE(calculateLayout({std::numeric_limits<size_t>::max(), 1}, {0, 1})
-                  .offsets.empty());
+  ASSERT_TRUE(layout);
+  EXPECT_EQ(layout->offsets, (std::vector<size_t>{0, 4, 11}));
+  EXPECT_EQ(layout->width, 13);
+
+  const auto empty = calculateLayout({}, {});
+  ASSERT_TRUE(empty);
+  EXPECT_TRUE(empty->offsets.empty());
+  EXPECT_EQ(empty->width, 0);
+  EXPECT_FALSE(calculateLayout({1}, {}));
+  EXPECT_FALSE(
+      calculateLayout({std::numeric_limits<size_t>::max(), 1}, {0, 1}));
+  EXPECT_FALSE(
+      calculateLayout({std::numeric_limits<size_t>::max(), 1}, {0, 0}));
 }
 
 TEST(AlignmentPolicyTest, AlignAndFlushLeftUseProvidedCellsAndMinimumSpacing) {

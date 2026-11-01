@@ -266,13 +266,13 @@ struct GroupPlacement {
     gaps.at(c) = gap_before_column(group, lines, c);
   }
   const auto layout = alignment::calculateLayout(group.col_max_width, gaps);
-  if (layout.offsets.size() != group.num_columns) {
+  if (!layout) {
     return std::nullopt;
   }
   size_t max_total_width = 0;
   for (size_t line_i : group.line_indices) {
     const size_t indent = lines.at(line_i).indentation_spaces;
-    max_total_width = std::max(max_total_width, indent + layout.width);
+    max_total_width = std::max(max_total_width, indent + layout->width);
   }
   if (max_total_width > style.column_limit) {
     return std::nullopt;
@@ -294,7 +294,7 @@ struct GroupPlacement {
         cursor = line.indentation_spaces + cell.width;
         continue;
       }
-      const size_t target_abs = line.indentation_spaces + layout.offsets.at(c);
+      const size_t target_abs = line.indentation_spaces + layout->offsets.at(c);
       spaces.at(c) = (target_abs > cursor) ? (target_abs - cursor) : 1;
       cursor = target_abs + cell.width;
     }

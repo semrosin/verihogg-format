@@ -79,21 +79,21 @@ namespace {
 }  // namespace
 
 auto calculateLayout(const std::vector<size_t>& widths,
-                     const std::vector<size_t>& gaps) -> Layout {
+                     const std::vector<size_t>& gaps) -> std::optional<Layout> {
   if (widths.size() != gaps.size()) {
-    return {};
+    return std::nullopt;
   }
   Layout result{.offsets = std::vector<size_t>(widths.size(), 0), .width = 0};
   for (size_t i = 1; i < widths.size(); ++i) {
     size_t previous_end = 0;
     if (!add(result.offsets.at(i - 1), widths.at(i - 1), previous_end) ||
         !add(previous_end, gaps.at(i), result.offsets.at(i))) {
-      return {};
+      return std::nullopt;
     }
   }
   if (!widths.empty() &&
       !add(result.offsets.back(), widths.back(), result.width)) {
-    return {};
+    return std::nullopt;
   }
   return result;
 }
@@ -166,7 +166,7 @@ auto applyPolicy(const Group& group, AlignmentPolicy policy,
     return result;
   }
   const auto layout = calculateLayout(widths, gaps);
-  if (layout.offsets.size() != count) {
+  if (!layout) {
     return std::nullopt;
   }
   size_t max_delta = 0;
@@ -175,7 +175,7 @@ auto applyPolicy(const Group& group, AlignmentPolicy policy,
   for (size_t r = 0; r < group.rows.size(); ++r) {
     const auto& row = group.rows.at(r);
     size_t total_width = 0;
-    if (!add(row.indentation, layout.width, total_width)) {
+    if (!add(row.indentation, layout->width, total_width)) {
       return std::nullopt;
     }
     if (group.rows.size() >= 2 && total_width > column_limit) {
@@ -183,8 +183,8 @@ auto applyPolicy(const Group& group, AlignmentPolicy policy,
     }
     for (size_t c = 1; c < count; ++c) {
       const size_t prev_end =
-          layout.offsets.at(c - 1) + row_widths.at(r).at(c - 1);
-      const size_t spaces = layout.offsets.at(c) - prev_end;
+          layout->offsets.at(c - 1) + row_widths.at(r).at(c - 1);
+      const size_t spaces = layout->offsets.at(c) - prev_end;
       const size_t index = row.cells.at(c).begin;
       aligned.at(r).at(index) = spaces;
       const size_t minimum = row.tokens.at(index).min_spaces;
