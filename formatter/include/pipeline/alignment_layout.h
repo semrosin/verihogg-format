@@ -4,6 +4,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <variant>
 #include <vector>
 
 #include "data/format_style.h"
@@ -45,17 +46,22 @@ struct Group {
   std::optional<std::string_view> original_text;
 };
 
-struct Result {
-  AlignmentPolicy policy = AlignmentPolicy::kFlushLeft;
-  // Minimum or aligned spaces before each token, indexed by row and token.
+// Minimum or aligned spaces before each token, indexed by row and token.
+struct FormatSpacing {
   std::vector<std::vector<size_t>> spaces;
-  // Present when preserving; the caller must output this exact source range.
-  std::optional<std::string> preserved_text;
 };
+
+// The caller must output this exact source range.
+struct PreserveSource {
+  std::string text;
+};
+
+using AlignmentAction = std::variant<FormatSpacing, PreserveSource>;
 
 // Returns no result for invalid inputs, unavailable source, unsupported source
 // whitespace in infer, or alignment exceeding the limit. No input is modified.
 [[nodiscard]] auto applyPolicy(const Group& group, AlignmentPolicy policy,
-                               size_t column_limit) -> std::optional<Result>;
+                               size_t column_limit)
+    -> std::optional<AlignmentAction>;
 
 }  // namespace format::alignment

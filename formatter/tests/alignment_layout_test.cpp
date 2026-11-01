@@ -7,13 +7,16 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <variant>
 #include <vector>
 
 namespace {
 using format::AlignmentPolicy;
 using format::alignment::applyPolicy;
 using format::alignment::calculateLayout;
+using format::alignment::FormatSpacing;
 using format::alignment::Group;
+using format::alignment::PreserveSource;
 using format::alignment::Row;
 
 constexpr size_t kColumnLimit = 100;
@@ -57,14 +60,16 @@ TEST(AlignmentPolicyTest, AlignAndFlushLeftUseProvidedCellsAndMinimumSpacing) {
   if (!aligned) {
     return;
   }
-  EXPECT_EQ(aligned.value().spaces,
+  ASSERT_TRUE(std::holds_alternative<FormatSpacing>(*aligned));
+  EXPECT_EQ(std::get<FormatSpacing>(*aligned).spaces,
             (std::vector<std::vector<size_t>>{{0, 2}, {0, 1}}));
   const auto flushed = applyPolicy(group, AlignmentPolicy::kFlushLeft, 1);
   ASSERT_TRUE(flushed);
   if (!flushed) {
     return;
   }
-  EXPECT_EQ(flushed.value().spaces,
+  ASSERT_TRUE(std::holds_alternative<FormatSpacing>(*flushed));
+  EXPECT_EQ(std::get<FormatSpacing>(*flushed).spaces,
             (std::vector<std::vector<size_t>>{{0, 1}, {0, 1}}));
   EXPECT_FALSE(applyPolicy(group, AlignmentPolicy::kAlign, 7));
   EXPECT_EQ(group.rows.at(0).tokens.at(1).min_spaces, 1);
@@ -78,11 +83,8 @@ TEST(AlignmentPolicyTest, PreserveReturnsExactSourceAndRejectsInvalidOffsets) {
   if (!result) {
     return;
   }
-  ASSERT_TRUE(result.value().preserved_text);
-  if (!result.value().preserved_text) {
-    return;
-  }
-  EXPECT_EQ(result.value().preserved_text.value(), source);
+  ASSERT_TRUE(std::holds_alternative<PreserveSource>(*result));
+  EXPECT_EQ(std::get<PreserveSource>(*result).text, source);
   group.rows.at(1).tokens.at(1).source_offset = 0;
   EXPECT_FALSE(applyPolicy(group, AlignmentPolicy::kPreserve, kColumnLimit));
   group.original_text.reset();
@@ -96,7 +98,9 @@ TEST(AlignmentPolicyTest, InferMatchesVeribleThresholds) {
   if (!result) {
     return;
   }
-  EXPECT_EQ(result.value().policy, AlignmentPolicy::kAlign);
+  ASSERT_TRUE(std::holds_alternative<FormatSpacing>(*result));
+  EXPECT_EQ(std::get<FormatSpacing>(*result).spaces,
+            (std::vector<std::vector<size_t>>{{0, 2}, {0, 1}}));
 
   auto flush =
       makeGroup("int   W\nsome_long_name T", {"int", "some_long_name"});
@@ -105,13 +109,17 @@ TEST(AlignmentPolicyTest, InferMatchesVeribleThresholds) {
   if (!result) {
     return;
   }
-  EXPECT_EQ(result.value().policy, AlignmentPolicy::kFlushLeft);
+  ASSERT_TRUE(std::holds_alternative<FormatSpacing>(*result));
+  EXPECT_EQ(std::get<FormatSpacing>(*result).spaces,
+            (std::vector<std::vector<size_t>>{{0, 1}, {0, 1}}));
   result = applyPolicy(flush, AlignmentPolicy::kInfer, kNarrowColumnLimit);
   ASSERT_TRUE(result);
   if (!result) {
     return;
   }
-  EXPECT_EQ(result.value().policy, AlignmentPolicy::kFlushLeft);
+  ASSERT_TRUE(std::holds_alternative<FormatSpacing>(*result));
+  EXPECT_EQ(std::get<FormatSpacing>(*result).spaces,
+            (std::vector<std::vector<size_t>>{{0, 1}, {0, 1}}));
 
   constexpr std::string_view ambiguous = "int    W\nsome_long_name T";
   auto preserve = makeGroup(ambiguous, {"int", "some_long_name"});
@@ -120,12 +128,8 @@ TEST(AlignmentPolicyTest, InferMatchesVeribleThresholds) {
   if (!result) {
     return;
   }
-  EXPECT_EQ(result.value().policy, AlignmentPolicy::kPreserve);
-  ASSERT_TRUE(result.value().preserved_text);
-  if (!result.value().preserved_text) {
-    return;
-  }
-  EXPECT_EQ(result.value().preserved_text.value(), ambiguous);
+  ASSERT_TRUE(std::holds_alternative<PreserveSource>(*result));
+  EXPECT_EQ(std::get<PreserveSource>(*result).text, ambiguous);
 
   auto align =
       makeGroup("int     W\nsome_long_name T", {"int", "some_long_name"});
@@ -134,7 +138,9 @@ TEST(AlignmentPolicyTest, InferMatchesVeribleThresholds) {
   if (!result) {
     return;
   }
-  EXPECT_EQ(result.value().policy, AlignmentPolicy::kAlign);
+  ASSERT_TRUE(std::holds_alternative<FormatSpacing>(*result));
+  EXPECT_EQ(std::get<FormatSpacing>(*result).spaces,
+            (std::vector<std::vector<size_t>>{{0, 12}, {0, 1}}));
 }
 
 TEST(AlignmentPolicyTest, PreservesMultilineCommentsAsSourceTokens) {
@@ -151,11 +157,8 @@ TEST(AlignmentPolicyTest, PreservesMultilineCommentsAsSourceTokens) {
   if (!result) {
     return;
   }
-  ASSERT_TRUE(result.value().preserved_text);
-  if (!result.value().preserved_text) {
-    return;
-  }
-  EXPECT_EQ(result.value().preserved_text.value(), source);
+  ASSERT_TRUE(std::holds_alternative<PreserveSource>(*result));
+  EXPECT_EQ(std::get<PreserveSource>(*result).text, source);
   EXPECT_FALSE(applyPolicy(group, AlignmentPolicy::kAlign, kColumnLimit));
 }
 
@@ -170,7 +173,8 @@ TEST(AlignmentPolicyTest, EmptySingleInvalidAndMultilineInputs) {
   if (!result) {
     return;
   }
-  EXPECT_EQ(result.value().spaces.at(0).at(1), 1);
+  ASSERT_TRUE(std::holds_alternative<FormatSpacing>(*result));
+  EXPECT_EQ(std::get<FormatSpacing>(*result).spaces.at(0).at(1), 1);
   single.rows.at(0).cells.at(1) = {0, 2};
   EXPECT_FALSE(applyPolicy(single, AlignmentPolicy::kAlign, kColumnLimit));
 

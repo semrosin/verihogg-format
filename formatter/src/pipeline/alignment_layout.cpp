@@ -99,11 +99,11 @@ auto calculateLayout(const std::vector<size_t>& widths,
 }
 
 auto applyPolicy(const Group& group, AlignmentPolicy policy,
-                 size_t column_limit) -> std::optional<Result> {
+                 size_t column_limit) -> std::optional<AlignmentAction> {
   if (!validGroup(group)) {
     return std::nullopt;
   }
-  Result result{.policy = policy, .spaces = {}, .preserved_text = std::nullopt};
+  FormatSpacing result;
   if (group.rows.empty()) {
     if (policy == AlignmentPolicy::kPreserve ||
         policy == AlignmentPolicy::kInfer) {
@@ -111,10 +111,8 @@ auto applyPolicy(const Group& group, AlignmentPolicy policy,
         return std::nullopt;
       }
       if (policy == AlignmentPolicy::kPreserve) {
-        result.preserved_text =
-            std::string(group.original_text.value_or(std::string_view{}));
-      } else {
-        result.policy = AlignmentPolicy::kFlushLeft;
+        return PreserveSource{
+            std::string(group.original_text.value_or(std::string_view{}))};
       }
     }
     return result;
@@ -125,9 +123,8 @@ auto applyPolicy(const Group& group, AlignmentPolicy policy,
     return std::nullopt;
   }
   if (policy == AlignmentPolicy::kPreserve) {
-    result.preserved_text =
-        std::string(group.original_text.value_or(std::string_view{}));
-    return result;
+    return PreserveSource{
+        std::string(group.original_text.value_or(std::string_view{}))};
   }
 
   for (const auto& row : group.rows) {
@@ -216,19 +213,17 @@ auto applyPolicy(const Group& group, AlignmentPolicy policy,
       }
     }
     if (max_delta <= 2 || excess >= 4) {
-      result.policy = AlignmentPolicy::kAlign;
+      policy = AlignmentPolicy::kAlign;
     } else if (excess <= 2) {
-      result.policy = AlignmentPolicy::kFlushLeft;
+      policy = AlignmentPolicy::kFlushLeft;
     } else {
-      result.policy = AlignmentPolicy::kPreserve;
+      policy = AlignmentPolicy::kPreserve;
     }
-    if (result.policy == AlignmentPolicy::kPreserve) {
-      result.spaces.clear();
-      result.preserved_text = std::string(source);
-      return result;
+    if (policy == AlignmentPolicy::kPreserve) {
+      return PreserveSource{std::string(source)};
     }
   }
-  if (result.policy == AlignmentPolicy::kAlign && group.rows.size() >= 2) {
+  if (policy == AlignmentPolicy::kAlign && group.rows.size() >= 2) {
     if (!fits) {
       return std::nullopt;
     }
