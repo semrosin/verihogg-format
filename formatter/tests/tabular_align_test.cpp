@@ -408,3 +408,44 @@ endmodule
   style.column_limit = kNarrowColumnLimit;
   EXPECT_EQ(formatText(input, style), expected_narrow);
 }
+
+TEST_F(TabularAlignerTest, MultilineTokenSeparatesAlignmentGroups) {
+  constexpr std::string_view input =
+      "module m;\n"
+      "a = 1;\n"
+      "longer = 2;\n"
+      "message = \"hello\\\nworld\";\n"
+      "x = 3;\n"
+      "longer_after = 4;\n"
+      "endmodule\n";
+  constexpr std::string_view expected =
+      "module m;\n"
+      "  a       = 1;\n"
+      "  longer  = 2;\n"
+      "  message = \"hello\\\nworld\";\n"
+      "  x             = 3;\n"
+      "  longer_after  = 4;\n"
+      "endmodule\n";
+  EXPECT_EQ(formatText(input), expected);
+  EXPECT_EQ(formatText(expected), expected);
+}
+
+TEST_F(TabularAlignerTest, MissingAssignmentLeftSideSeparatesGroups) {
+  constexpr std::string_view input =
+      "module m;\n"
+      "a = 1;\n"
+      "longer = 2;\n"
+      "= bad;\n"
+      "x = 3;\n"
+      "longer_after = 4;\n"
+      "endmodule\n";
+  constexpr std::string_view expected =
+      "module m;\n"
+      "  a       = 1;\n"
+      "  longer  = 2;\n"
+      "  = bad;\n"
+      "  x             = 3;\n"
+      "  longer_after  = 4;\n"
+      "endmodule\n";
+  EXPECT_EQ(formatText(input), expected);
+}
