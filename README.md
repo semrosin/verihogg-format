@@ -407,7 +407,8 @@ The `sv-tests report` workflow runs the checked-out formatter against the
 VerihoggFormat runner in sv-tests on pushes to `main`, daily at 02:00 UTC,
 and on manual dispatch. It publishes the sv-tests table together
 with `unsupported.html` and `constructs.html` to this repository's GitHub
-Pages site. The report is
+Pages site. The landing page links to the test table and both constructs
+reports. The report is
 also available as the `sv-tests-report` workflow artifact for 14 days. Test
 failures are shown in the report; infrastructure or report-generation failures
 stop publication and leave the last successful site in place.

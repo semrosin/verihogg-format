@@ -108,11 +108,13 @@ slang_version = html.escape(subprocess.check_output(
 generated = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')
 links = (
     '<p style="padding: 1em">'
-    '<a href="unsupported.html">Unsupported constructs report</a> · '
-    '<a href="constructs.html">Warning constructs</a> · '
+    '<a href="index.html">All reports</a> · '
     f'<a href="https://github.com/{repository}/commit/{sha}">Formatter {sha}</a><br>'
     f'sv-tests {sv_tests_sha} · {slang_version} · {generated}'
     '</p>\n'
 )
 index.write_text(page.replace('</body>', links + '</body>', 1), encoding='utf-8')
 PY
+
+# Keep the full sv-tests table alongside the new report selection page.
+python3 tools/prepare-formatter-home out/report

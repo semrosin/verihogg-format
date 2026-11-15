@@ -30,8 +30,8 @@ jobs:
         uses: actions/checkout@v6
         with:
           repository: verihogg/sv-tests
-          # develop: update deliberately when the runner or tests should change.
-          ref: eabb1204f2a3a23f51d0400a472e5d568a30b468
+          # Includes the formatter report landing page; update deliberately.
+          ref: 73f33df37394f46655ef7db47cf1600ac5854f44
           path: sv-tests
 
       - name: Checkout report generators only
