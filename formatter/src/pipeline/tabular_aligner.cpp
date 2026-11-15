@@ -9,7 +9,7 @@ namespace format {
 static constexpr size_t kMinColumnGap = 4;
 static constexpr size_t kMinGroupSize = 2;
 static constexpr size_t kCommentColumnGap = 8;
-static constexpr size_t kMinSpacesBeforeAssignment = 2;
+static constexpr size_t kMinSpacesBeforeAssignment = 1;
 static constexpr size_t kMinSpacesAfterAssignment = 1;
 static constexpr size_t kMinSpacesCaseItem = 1;
 static constexpr size_t kMinSpacesPortDirectionType = 2;
@@ -353,6 +353,33 @@ static void process_lines(std::vector<UnwrappedLine<FormatToken>>& lines,
     }
 
     if (line.tokens.empty()) {
+      if (!current_group.line_indices.empty()) {
+        flush();
+      }
+      continue;
+    }
+
+    // A type-body header (typedef ... {) is a layout anchor, not a
+    // declaration row: it must not join the alignment group of the members
+    // that follow, and its own spacing stays annotated.
+    if (is_tabular &&
+        line.tokens.back().token.kind == slang::parsing::TokenKind::OpenBrace) {
+      if (!current_group.line_indices.empty()) {
+        flush();
+      }
+      continue;
+    }
+
+    // Case-item lines keep the annotated spacing: no whitespace before the
+    // label colon and no column alignment after it. Do not mark them
+    // kAlreadyFormatted: unlike aligned groups, over-limit case lines must
+    // still reach the wrap search (an overflowing group likewise stays
+    // unformatted and falls through to the wrap search).
+    const bool is_case_item =
+        std::ranges::any_of(line.tokens, [](const FormatToken& ft) {
+          return ft.type == TokenType::kCaseLabelColon;
+        });
+    if (is_case_item) {
       if (!current_group.line_indices.empty()) {
         flush();
       }

@@ -2,7 +2,9 @@
 
 #include <slang/parsing/Token.h>
 
+#include <cstddef>
 #include <gsl/span>
+#include <optional>
 #include <string_view>
 
 #include "data/format_style.h"
@@ -59,7 +61,10 @@ class TokenAnnotator {
   // Uses results from matchBrackets (nesting_level, matching_bracket)
   // and an internal AnnotationContext stack to track the current region
   // (inside a port list, inside an expression, etc.).
-  auto determineTokenTypes(gsl::span<FormatToken> tokens) const -> void;
+  // label_colon, when set, is the index of the ':' that terminates a
+  // case-item label line.
+  auto determineTokenTypes(gsl::span<FormatToken> tokens,
+                           std::optional<size_t> label_colon) const -> void;
 
   // Pass 3: Computing formatting metrics
   // Fills in FormatToken::before for each token (except the first):
@@ -96,7 +101,8 @@ class TokenAnnotator {
                                    const FormatToken& right) const
       -> BreakDecision;
 
-  auto annotateSpan(gsl::span<FormatToken> tokens) const -> void;
+  auto annotateSpan(gsl::span<FormatToken> tokens,
+                    std::optional<size_t> label_colon) const -> void;
 
   std::reference_wrapper<const FormatStyle> style;
 };

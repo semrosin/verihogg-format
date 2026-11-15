@@ -84,7 +84,9 @@ class FormatArgsBinder {
   std::optional<bool> wrap_end_else_clauses_;
 
   std::optional<bool> inplace_;
+  std::optional<bool> check_;
   std::optional<std::string> config_path_;
+  bool no_links_ = false;
 };
 
 }  // namespace format

@@ -188,6 +188,176 @@ class SVParser {
     addLine();
   }
 
+  // Look-ahead scan of one typedef statement. std::nullopt means the
+  // statement boundary is not a plain depth-0 semicolon (missing close,
+  // compiler directive, conditional boundary) and the caller must fall back
+  // to consumeUntilSemi().
+  struct TypedefScan {
+    size_t end = 0;        // offset of the terminating ';'
+    size_t body_open = 0;  // offset of the depth-0 '{'
+    bool has_brace = false;
+    bool is_struct_union = false;
+  };
+
+  [[nodiscard]] auto scanTypedef() const -> std::optional<TypedefScan> {
+    TypedefScan scan;
+    size_t paren = 0;
+    size_t bracket = 0;
+    size_t brace = 0;
+    bool seen_struct_union = false;
+    for (size_t i = 0;; ++i) {
+      const Token tok = peek(i);
+      if (tok.kind == TK::EndOfFile || isCompilerDirective(tok) ||
+          isConditionalBoundaryDirective(tok)) {
+        return std::nullopt;
+      }
+      switch (tok.kind) {
+        case TK::StructKeyword:
+        case TK::UnionKeyword:
+          seen_struct_union = true;
+          break;
+        case TK::Semicolon:
+          if (paren == 0 && bracket == 0 && brace == 0) {
+            scan.end = i;
+            return scan;
+          }
+          break;
+        case TK::OpenParenthesis:
+          ++paren;
+          break;
+        case TK::CloseParenthesis:
+          if (paren == 0) {
+            return std::nullopt;
+          }
+          --paren;
+          break;
+        case TK::OpenBracket:
+          ++bracket;
+          break;
+        case TK::CloseBracket:
+          if (bracket == 0) {
+            return std::nullopt;
+          }
+          --bracket;
+          break;
+        case TK::OpenBrace:
+          if (brace == 0 && paren == 0 && bracket == 0 && !scan.has_brace) {
+            scan.has_brace = true;
+            scan.body_open = i;
+            scan.is_struct_union = seen_struct_union;
+          }
+          ++brace;
+          break;
+        case TK::ApostropheOpenBrace:
+          ++brace;
+          break;
+        case TK::CloseBrace:
+          if (brace == 0) {
+            return std::nullopt;
+          }
+          --brace;
+          break;
+        default:
+          break;
+      }
+    }
+  }
+
+  // Layout per the lowRISC style guide:
+  //   - simple typedef: one line;
+  //   - struct/union and enum: always split — header, body, close;
+  //     every struct member and every enum entry goes on its own line
+  //     (the tabular aligner then lines up '=' in valued enums).
+  auto parseTypedef() -> void {
+    const std::optional<TypedefScan> scan = scanTypedef();
+    if (!scan) {
+      consumeUntilSemi();
+      return;
+    }
+    const bool split = scan->has_brace;
+    if (!split) {
+      for (size_t i = 0; i <= scan->end; ++i) {
+        consumeInto(line_);
+      }
+      addLine();
+      return;
+    }
+
+    // Header: typedef ... {
+    for (size_t i = 0; i <= scan->body_open; ++i) {
+      consumeInto(line_);
+    }
+    addLine();
+    ++indent_level_;
+
+    size_t paren = 0;
+    size_t bracket = 0;
+    size_t brace = 0;
+    if (scan->is_struct_union) {
+      // One member declaration per line, terminated by a depth-0 ';'.
+      while (!at(TK::EndOfFile)) {
+        if (at(TK::CloseBrace) && brace == 0) {
+          break;
+        }
+        if (at(TK::OpenParenthesis)) {
+          ++paren;
+        } else if (at(TK::CloseParenthesis)) {
+          --paren;
+        } else if (at(TK::OpenBracket)) {
+          ++bracket;
+        } else if (at(TK::CloseBracket)) {
+          --bracket;
+        } else if (at(TK::OpenBrace) || at(TK::ApostropheOpenBrace)) {
+          ++brace;
+        } else if (at(TK::CloseBrace)) {
+          --brace;
+        } else if (at(TK::Semicolon) && paren == 0 && bracket == 0 &&
+                   brace == 0) {
+          consumeInto(line_);
+          addLine();
+          continue;
+        }
+        consumeInto(line_);
+      }
+    } else {
+      // One enum entry per line, terminated by a depth-0 ','.
+      while (!at(TK::EndOfFile)) {
+        if (at(TK::CloseBrace) && brace == 0) {
+          break;
+        }
+        if (at(TK::OpenParenthesis)) {
+          ++paren;
+        } else if (at(TK::CloseParenthesis)) {
+          --paren;
+        } else if (at(TK::OpenBracket)) {
+          ++bracket;
+        } else if (at(TK::CloseBracket)) {
+          --bracket;
+        } else if (at(TK::OpenBrace) || at(TK::ApostropheOpenBrace)) {
+          ++brace;
+        } else if (at(TK::CloseBrace)) {
+          --brace;
+        } else if (at(TK::Comma) && paren == 0 && bracket == 0 && brace == 0) {
+          consumeInto(line_);
+          addLine();
+          continue;
+        }
+        consumeInto(line_);
+      }
+    }
+    addLine();
+    --indent_level_;
+
+    // Close: } name;
+    while (!at(TK::EndOfFile)) {
+      consumeInto(line_);
+      if (line_.tokens.back().kind == TK::Semicolon) {
+        break;
+      }
+    }
+    addLine();
+  }
+
   auto warnUnsupported(Token tok, std::string_view construct) -> void {
     warnings_.push_back({
         .location = tok.location(),
@@ -196,6 +366,7 @@ class SVParser {
                    std::string(construct) +
                    (recovery_enabled_ ? "'; original text preserved"
                                       : "'; original source unavailable"),
+        .construct = std::string(construct),
     });
   }
 
@@ -481,7 +652,9 @@ class SVParser {
     lines_.push_back(
         Line{.tokens = {},
              .raw_text = std::string(source_.substr(begin, end - begin)),
-             .is_opaque = true});
+             .is_opaque = true,
+             .source_offset = begin,
+             .case_label_colon = std::nullopt});
     preserved_source_end_ = end;
   }
 
@@ -577,6 +750,7 @@ class SVParser {
         .code = "incompatible-conditional-branches",
         .message = "conditional compilation branches leave incompatible parser "
                    "states; continuing with the first branch structure",
+        .construct = "incompatible conditional compilation branches",
     });
   }
 
@@ -843,6 +1017,12 @@ class SVParser {
   }
 
   auto parseIndentedStatement() -> void {
+    if (at(TK::BeginKeyword) && !lines_.empty()) {
+      line_ = std::move(lines_.back());
+      lines_.pop_back();
+      parseStatement();
+      return;
+    }
     const size_t stack_size_before = block_stack_.size();
     ++indent_level_;
     parseStatement();
@@ -981,9 +1161,12 @@ class SVParser {
       case TK::ReturnKeyword:
       case TK::StringKeyword:
       case TK::TimeKeyword:
-      case TK::TypedefKeyword:
       case TK::VoidKeyword:
         consumeUntilSemi();
+        break;
+
+      case TK::TypedefKeyword:
+        parseTypedef();
         break;
 
       default:
@@ -1178,13 +1361,25 @@ class SVParser {
 
   // Each top-level comma-separated item in a parenthesized list gets its own
   // UnwrappedLine, so parameters and ports can expand vertically.
-  auto parseParenthesizedListInto(Line& line) -> void {
+  // When indent_items is set (module port lists), the items are indented one
+  // level while the header line and the closing ')' stay at the outer level.
+  auto parseParenthesizedListInto(Line& line, bool indent_items = false)
+      -> void {
     if (!at(TK::OpenParenthesis)) {
       return;
     }
     line.tokens.push_back(consume());
 
+    // Empty list: keep "()" on the current line instead of splitting.
+    if (at(TK::CloseParenthesis)) {
+      line.tokens.push_back(consume());
+      return;
+    }
+
     addLine();
+    if (indent_items) {
+      ++indent_level_;
+    }
     int parenDepth = 0;
     int bracketDepth = 0;
     int braceDepth = 0;
@@ -1251,6 +1446,9 @@ class SVParser {
       consumeInto(line);
     }
     addLine();
+    if (indent_items) {
+      --indent_level_;
+    }
     if (at(TK::CloseParenthesis)) {
       line.tokens.push_back(consume());
     }
@@ -1268,8 +1466,9 @@ class SVParser {
       consumeInto(line_);
       consumeBalancedInto(TK::OpenParenthesis, TK::CloseParenthesis, line_);
     }
-    // port list: each port is a child line of the '(' node
-    parseParenthesizedListInto(line_);
+    // port list: each port is a child line of the '(' node, indented one
+    // level; the header and the closing ')' stay in column zero.
+    parseParenthesizedListInto(line_, /*indent_items=*/true);
     if (at(TK::Semicolon)) {
       consumeInto(line_);
     }
@@ -1346,6 +1545,12 @@ class SVParser {
     parseIndentedStatement();
 
     if (at(TK::ElseKeyword)) {
+      if (!style_.get().wrap_end_else_clauses && !lines_.empty() &&
+          !lines_.back().tokens.empty() && lines_.back().tokens.size() == 1 &&
+          lines_.back().tokens.front().kind == TK::EndKeyword) {
+        line_ = std::move(lines_.back());
+        lines_.pop_back();
+      }
       consumeInto(line_);  // else
       if (at(TK::IfKeyword)) {
         // else if: `if (...)` is added into the same line_ that already has
@@ -1393,6 +1598,7 @@ class SVParser {
       consumeInto(line_);
       if (at(TK::Colon)) {
         consumeInto(line_);
+        line_.case_label_colon = line_.tokens.size() - 1;
       }
     } else {
       while (!at(TK::Colon) && !at(TK::Directive) && !at(TK::EndOfFile) &&
@@ -1401,6 +1607,7 @@ class SVParser {
       }
       if (at(TK::Colon)) {
         consumeInto(line_);
+        line_.case_label_colon = line_.tokens.size() - 1;
       }
     }
     addLine();

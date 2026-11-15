@@ -172,9 +172,6 @@ TEST_F(TreeUnwrapperTest, ModuleHeaderWithoutPorts) {
             N(TK::ModuleKeyword, "module"),
             N(TK::Identifier, "foo"),
             N(TK::OpenParenthesis, "("),
-        }),
-      L(0, PP::kFitOnLineElseExpand,
-        {
             N(TK::CloseParenthesis, ")"),
             N(TK::Semicolon, ";"),
         }),
@@ -201,7 +198,7 @@ TEST_F(TreeUnwrapperTest, ThreePortsBecomeThreeLines) {
             N(TK::OpenParenthesis, "("),
         }),
       // port 0: input logic clk ,
-      L(0, PP::kTabularAlignment,
+      L(kIndent, PP::kTabularAlignment,
         {
             N(TK::InputKeyword, "input"),
             N(TK::LogicKeyword, "logic"),
@@ -209,7 +206,7 @@ TEST_F(TreeUnwrapperTest, ThreePortsBecomeThreeLines) {
             N(TK::Comma, ","),
         }),
       // port 1: input logic rst_n ,
-      L(0, PP::kTabularAlignment,
+      L(kIndent, PP::kTabularAlignment,
         {
             N(TK::InputKeyword, "input"),
             N(TK::LogicKeyword, "logic"),
@@ -217,7 +214,7 @@ TEST_F(TreeUnwrapperTest, ThreePortsBecomeThreeLines) {
             N(TK::Comma, ","),
         }),
       // port 2: output logic [3:0] count  — no trailing comma
-      L(0, PP::kTabularAlignment,
+      L(kIndent, PP::kTabularAlignment,
         {
             N(TK::OutputKeyword, "output"),
             N(TK::LogicKeyword, "logic"),
@@ -251,9 +248,6 @@ TEST_F(TreeUnwrapperTest, BodyDeclarationsWithKeywordsUseTabularAlignment) {
             N(TK::ModuleKeyword, "module"),
             N(TK::Identifier, "m"),
             N(TK::OpenParenthesis, "("),
-        }),
-      L(0, PP::kFitOnLineElseExpand,
-        {
             N(TK::CloseParenthesis, ")"),
             N(TK::Semicolon, ";"),
         }),
@@ -288,9 +282,6 @@ TEST_F(TreeUnwrapperTest, ParameterizedInstantiationIsParsedBeforeFallback) {
             N(TK::ModuleKeyword, "module"),
             N(TK::Identifier, "m"),
             N(TK::OpenParenthesis, "("),
-        }),
-      L(0, PP::kFitOnLineElseExpand,
-        {
             N(TK::CloseParenthesis, ")"),
             N(TK::Semicolon, ";"),
         }),
@@ -361,7 +352,7 @@ TEST_F(TreeUnwrapperTest, MprfConditionalPortsKeepDirectivesAsLines) {
             N(TK::Directive, "`ifdef"),
             N(TK::Identifier, "SCR1_MPRF_RST_EN"),
         }),
-      L(0, PP::kTabularAlignment,
+      L(kIndent, PP::kTabularAlignment,
         {
             N(TK::InputKeyword, "input"),
             N(TK::LogicKeyword, "logic"),
@@ -372,7 +363,7 @@ TEST_F(TreeUnwrapperTest, MprfConditionalPortsKeepDirectivesAsLines) {
         {
             N(TK::Directive, "`endif"),
         }),
-      L(0, PP::kTabularAlignment,
+      L(kIndent, PP::kTabularAlignment,
         {
             N(TK::InputKeyword, "input"),
             N(TK::LogicKeyword, "logic"),
@@ -405,7 +396,7 @@ TEST_F(TreeUnwrapperTest, PortListKeepsUnknownBacktickAsMacroUsage) {
             N(TK::Identifier, "m"),
             N(TK::OpenParenthesis, "("),
         }),
-      L(0, PP::kTabularAlignment,
+      L(kIndent, PP::kTabularAlignment,
         {
             N(TK::Directive, "`SCR1_PORT"),
             N(TK::OpenParenthesis, "("),
@@ -417,7 +408,7 @@ TEST_F(TreeUnwrapperTest, PortListKeepsUnknownBacktickAsMacroUsage) {
             N(TK::CloseParenthesis, ")"),
             N(TK::Comma, ","),
         }),
-      L(0, PP::kTabularAlignment,
+      L(kIndent, PP::kTabularAlignment,
         {
             N(TK::InputKeyword, "input"),
             N(TK::LogicKeyword, "logic"),
@@ -454,9 +445,6 @@ TEST_F(TreeUnwrapperTest, MprfRamAttributeDeclarationsStayFlat) {
             N(TK::ModuleKeyword, "module"),
             N(TK::Identifier, "m"),
             N(TK::OpenParenthesis, "("),
-        }),
-      L(0, PP::kFitOnLineElseExpand,
-        {
             N(TK::CloseParenthesis, ")"),
             N(TK::Semicolon, ";"),
         }),
@@ -543,9 +531,6 @@ TEST_F(TreeUnwrapperTest, ConditionalModuleBranchesShareEndmodule) {
             N(TK::ModuleKeyword, "module"),
             N(TK::Identifier, "m_a"),
             N(TK::OpenParenthesis, "("),
-        }),
-      L(0, PP::kFitOnLineElseExpand,
-        {
             N(TK::CloseParenthesis, ")"),
             N(TK::Semicolon, ";"),
         }),
@@ -558,9 +543,6 @@ TEST_F(TreeUnwrapperTest, ConditionalModuleBranchesShareEndmodule) {
             N(TK::ModuleKeyword, "module"),
             N(TK::Identifier, "m_b"),
             N(TK::OpenParenthesis, "("),
-        }),
-      L(0, PP::kFitOnLineElseExpand,
-        {
             N(TK::CloseParenthesis, ")"),
             N(TK::Semicolon, ";"),
         }),
@@ -617,9 +599,6 @@ TEST_F(TreeUnwrapperTest,
             N(TK::ModuleKeyword, "module"),
             N(TK::Identifier, "m_a"),
             N(TK::OpenParenthesis, "("),
-        }),
-      L(0, PP::kFitOnLineElseExpand,
-        {
             N(TK::CloseParenthesis, ")"),
             N(TK::Semicolon, ";"),
         }),
@@ -641,9 +620,6 @@ TEST_F(TreeUnwrapperTest,
             N(TK::ModuleKeyword, "module"),
             N(TK::Identifier, "m_b"),
             N(TK::OpenParenthesis, "("),
-        }),
-      L(0, PP::kFitOnLineElseExpand,
-        {
             N(TK::CloseParenthesis, ")"),
             N(TK::Semicolon, ";"),
         }),
@@ -669,7 +645,7 @@ TEST_F(TreeUnwrapperTest,
 
 // ---- always_ff --------------------------------------------------------------
 
-TEST_F(TreeUnwrapperTest, AlwaysFFIsOwnLine) {
+TEST_F(TreeUnwrapperTest, AlwaysFFHeaderOnOwnLine) {
   auto lines =
       parse("module m (); always_ff @(posedge clk) begin end endmodule");
 
@@ -680,13 +656,10 @@ TEST_F(TreeUnwrapperTest, AlwaysFFIsOwnLine) {
             N(TK::ModuleKeyword, "module"),
             N(TK::Identifier, "m"),
             N(TK::OpenParenthesis, "("),
-        }),
-      L(0, PP::kFitOnLineElseExpand,
-        {
             N(TK::CloseParenthesis, ")"),
             N(TK::Semicolon, ";"),
         }),
-      // always_ff @(posedge clk)  — indent 1*kIndent
+      // always_ff @(posedge clk) begin  — indent 1*kIndent
       L(kIndent, PP::kAlwaysExpand,
         {
             N(TK::AlwaysFFKeyword, "always_ff"),
@@ -695,14 +668,10 @@ TEST_F(TreeUnwrapperTest, AlwaysFFIsOwnLine) {
             N(TK::PosEdgeKeyword, "posedge"),
             N(TK::Identifier, "clk"),
             N(TK::CloseParenthesis, ")"),
-        }),
-      // begin  — indent 2*kIndent
-      L(kIndent * 2, PP::kAlwaysExpand,
-        {
             N(TK::BeginKeyword, "begin"),
         }),
-      // end  — indent 2*kIndent
-      L(kIndent * 2, PP::kAlwaysExpand,
+      // end  — indent 1*kIndent
+      L(kIndent, PP::kAlwaysExpand,
         {
             N(TK::EndKeyword, "end"),
         }),
@@ -736,9 +705,6 @@ TEST_F(TreeUnwrapperTest, ConditionalAlwaysFFBranchesShareBeginEndBody) {
             N(TK::ModuleKeyword, "module"),
             N(TK::Identifier, "m"),
             N(TK::OpenParenthesis, "("),
-        }),
-      L(0, PP::kFitOnLineElseExpand,
-        {
             N(TK::CloseParenthesis, ")"),
             N(TK::Semicolon, ";"),
         }),
@@ -755,9 +721,6 @@ TEST_F(TreeUnwrapperTest, ConditionalAlwaysFFBranchesShareBeginEndBody) {
             N(TK::PosEdgeKeyword, "posedge"),
             N(TK::Identifier, "clk"),
             N(TK::CloseParenthesis, ")"),
-        }),
-      L(kIndent * 2, PP::kAlwaysExpand,
-        {
             N(TK::BeginKeyword, "begin"),
         }),
       L(0, PP::kAlwaysExpand,
@@ -772,38 +735,32 @@ TEST_F(TreeUnwrapperTest, ConditionalAlwaysFFBranchesShareBeginEndBody) {
             N(TK::PosEdgeKeyword, "posedge"),
             N(TK::Identifier, "alt_clk"),
             N(TK::CloseParenthesis, ")"),
-        }),
-      L(kIndent * 2, PP::kAlwaysExpand,
-        {
             N(TK::BeginKeyword, "begin"),
         }),
       L(0, PP::kAlwaysExpand,
         {
             N(TK::Directive, "`endif"),
         }),
-      L(kIndent * 3, PP::kAlwaysExpand,
+      L(kIndent * 2, PP::kAlwaysExpand,
         {
             N(TK::IfKeyword, "if"),
             N(TK::OpenParenthesis, "("),
             N(TK::Identifier, "rst"),
             N(TK::CloseParenthesis, ")"),
-        }),
-      L(kIndent * 4, PP::kAlwaysExpand,
-        {
             N(TK::BeginKeyword, "begin"),
         }),
-      L(kIndent * 5, PP::kAlwaysExpand,
+      L(kIndent * 3, PP::kAlwaysExpand,
         {
             N(TK::Identifier, "q"),
             N(TK::LessThanEquals, "<="),
             N(TK::Identifier, "d"),
             N(TK::Semicolon, ";"),
         }),
-      L(kIndent * 4, PP::kAlwaysExpand,
+      L(kIndent * 2, PP::kAlwaysExpand,
         {
             N(TK::EndKeyword, "end"),
         }),
-      L(kIndent * 2, PP::kAlwaysExpand,
+      L(kIndent, PP::kAlwaysExpand,
         {
             N(TK::EndKeyword, "end"),
         }),
@@ -837,9 +794,6 @@ TEST_F(TreeUnwrapperTest, MprfResetAlwaysFFWithAggregateLiteral) {
             N(TK::ModuleKeyword, "module"),
             N(TK::Identifier, "m"),
             N(TK::OpenParenthesis, "("),
-        }),
-      L(0, PP::kFitOnLineElseExpand,
-        {
             N(TK::CloseParenthesis, ")"),
             N(TK::Semicolon, ";"),
         }),
@@ -859,24 +813,18 @@ TEST_F(TreeUnwrapperTest, MprfResetAlwaysFFWithAggregateLiteral) {
             N(TK::NegEdgeKeyword, "negedge"),
             N(TK::Identifier, "rst_n"),
             N(TK::CloseParenthesis, ")"),
-        }),
-      L(kIndent * 2, PP::kAlwaysExpand,
-        {
             N(TK::BeginKeyword, "begin"),
         }),
-      L(kIndent * 3, PP::kAlwaysExpand,
+      L(kIndent * 2, PP::kAlwaysExpand,
         {
             N(TK::IfKeyword, "if"),
             N(TK::OpenParenthesis, "("),
             N(TK::Tilde, "~"),
             N(TK::Identifier, "rst_n"),
             N(TK::CloseParenthesis, ")"),
-        }),
-      L(kIndent * 4, PP::kAlwaysExpand,
-        {
             N(TK::BeginKeyword, "begin"),
         }),
-      L(kIndent * 5, PP::kAlwaysExpand,
+      L(kIndent * 3, PP::kAlwaysExpand,
         {
             N(TK::Identifier, "mprf_int"),
             N(TK::LessThanEquals, "<="),
@@ -887,23 +835,17 @@ TEST_F(TreeUnwrapperTest, MprfResetAlwaysFFWithAggregateLiteral) {
             N(TK::CloseBrace, "}"),
             N(TK::Semicolon, ";"),
         }),
-      L(kIndent * 4, PP::kAlwaysExpand,
+      L(kIndent * 2, PP::kAlwaysExpand,
         {
             N(TK::EndKeyword, "end"),
-        }),
-      L(kIndent * 3, PP::kAlwaysExpand,
-        {
             N(TK::ElseKeyword, "else"),
             N(TK::IfKeyword, "if"),
             N(TK::OpenParenthesis, "("),
             N(TK::Identifier, "wr_req_vd"),
             N(TK::CloseParenthesis, ")"),
-        }),
-      L(kIndent * 4, PP::kAlwaysExpand,
-        {
             N(TK::BeginKeyword, "begin"),
         }),
-      L(kIndent * 5, PP::kAlwaysExpand,
+      L(kIndent * 3, PP::kAlwaysExpand,
         {
             N(TK::Identifier, "mprf_int"),
             N(TK::OpenBracket, "["),
@@ -913,11 +855,11 @@ TEST_F(TreeUnwrapperTest, MprfResetAlwaysFFWithAggregateLiteral) {
             N(TK::Identifier, "exu2mprf_rd_data_i"),
             N(TK::Semicolon, ";"),
         }),
-      L(kIndent * 4, PP::kAlwaysExpand,
+      L(kIndent * 2, PP::kAlwaysExpand,
         {
             N(TK::EndKeyword, "end"),
         }),
-      L(kIndent * 2, PP::kAlwaysExpand,
+      L(kIndent, PP::kAlwaysExpand,
         {
             N(TK::EndKeyword, "end"),
         }),
@@ -952,9 +894,6 @@ TEST_F(TreeUnwrapperTest, MprfSimulationAssertionStaysSingleStatementLine) {
             N(TK::ModuleKeyword, "module"),
             N(TK::Identifier, "m"),
             N(TK::OpenParenthesis, "("),
-        }),
-      L(0, PP::kFitOnLineElseExpand,
-        {
             N(TK::CloseParenthesis, ")"),
             N(TK::Semicolon, ";"),
         }),
@@ -1038,9 +977,6 @@ TEST_F(TreeUnwrapperTest, LabeledAssertionElseBeginParsesActionBlock) {
             N(TK::ModuleKeyword, "module"),
             N(TK::Identifier, "m"),
             N(TK::OpenParenthesis, "("),
-        }),
-      L(0, PP::kFitOnLineElseExpand,
-        {
             N(TK::CloseParenthesis, ")"),
             N(TK::Semicolon, ";"),
         }),
@@ -1094,7 +1030,7 @@ TEST_F(TreeUnwrapperTest, LabeledAssertionElseBeginParsesActionBlock) {
 
 // ---- begin/end --------------------------------------------------------------
 
-TEST_F(TreeUnwrapperTest, BeginEndAreOwnLines) {
+TEST_F(TreeUnwrapperTest, BeginAttachesToHeaderLine) {
   auto lines = parse("module m (); always_comb begin end endmodule");
 
   const std::vector<LineSnap> expected = {
@@ -1103,22 +1039,17 @@ TEST_F(TreeUnwrapperTest, BeginEndAreOwnLines) {
             N(TK::ModuleKeyword, "module"),
             N(TK::Identifier, "m"),
             N(TK::OpenParenthesis, "("),
-        }),
-      L(0, PP::kFitOnLineElseExpand,
-        {
             N(TK::CloseParenthesis, ")"),
             N(TK::Semicolon, ";"),
         }),
-      // always_comb has no sensitivity list, so no @ token
+      // always_comb begin  — indent 1*kIndent
       L(kIndent, PP::kAlwaysExpand,
         {
             N(TK::AlwaysCombKeyword, "always_comb"),
-        }),
-      L(kIndent * 2, PP::kAlwaysExpand,
-        {
             N(TK::BeginKeyword, "begin"),
         }),
-      L(kIndent * 2, PP::kAlwaysExpand,
+      // end  — indent 1*kIndent
+      L(kIndent, PP::kAlwaysExpand,
         {
             N(TK::EndKeyword, "end"),
         }),
@@ -1143,38 +1074,32 @@ TEST_F(TreeUnwrapperTest, IfIsOwnLine) {
             N(TK::ModuleKeyword, "module"),
             N(TK::Identifier, "m"),
             N(TK::OpenParenthesis, "("),
-        }),
-      L(0, PP::kFitOnLineElseExpand,
-        {
             N(TK::CloseParenthesis, ")"),
             N(TK::Semicolon, ";"),
         }),
       L(kIndent, PP::kAlwaysExpand,
         {
             N(TK::AlwaysCombKeyword, "always_comb"),
-        }),
-      L(kIndent * 2, PP::kAlwaysExpand,
-        {
             N(TK::BeginKeyword, "begin"),
         }),
-      // if (a)  — indent 3*kIndent (inside begin, inside always_comb, inside
+      // if (a)  — indent 2*kIndent (inside begin, inside always_comb, inside
       // module)
-      L(kIndent * 3, PP::kAlwaysExpand,
+      L(kIndent * 2, PP::kAlwaysExpand,
         {
             N(TK::IfKeyword, "if"),
             N(TK::OpenParenthesis, "("),
             N(TK::Identifier, "a"),
             N(TK::CloseParenthesis, ")"),
         }),
-      // b = 1;  — indent 4*kIndent
-      L(kIndent * 4, PP::kAlwaysExpand,
+      // b = 1;  — indent 3*kIndent
+      L(kIndent * 3, PP::kAlwaysExpand,
         {
             N(TK::Identifier, "b"),
             N(TK::Equals, "="),
             N(TK::IntegerLiteral, "1"),
             N(TK::Semicolon, ";"),
         }),
-      L(kIndent * 2, PP::kAlwaysExpand,
+      L(kIndent, PP::kAlwaysExpand,
         {
             N(TK::EndKeyword, "end"),
         }),
@@ -1430,6 +1355,78 @@ TEST_F(TreeUnwrapperTest, ForkJoinAnyUsesSharedBlockBoundary) {
     }
   }
   EXPECT_TRUE(resumed);
+}
+
+// ---- typedef ---------------------------------------------------------------
+
+TEST_F(TreeUnwrapperTest, TypedefStructSplitsIntoLines) {
+  auto result = parseWithDiagnostics(
+      "typedef struct packed { logic [2:0] field; } "
+      "baz_t;");
+
+  EXPECT_TRUE(result.warnings.empty());
+
+  const std::vector<LineSnap> expected = {
+      L(0, PP::kFitOnLineElseExpand,
+        {
+            N(TK::TypedefKeyword, "typedef"),
+            N(TK::StructKeyword, "struct"),
+            N(TK::PackedKeyword, "packed"),
+            N(TK::OpenBrace, "{"),
+        }),
+      L(kIndent, PP::kTabularAlignment,
+        {
+            N(TK::LogicKeyword, "logic"),
+            N(TK::OpenBracket, "["),
+            N(TK::IntegerLiteral, "2"),
+            N(TK::Colon, ":"),
+            N(TK::IntegerLiteral, "0"),
+            N(TK::CloseBracket, "]"),
+            N(TK::Identifier, "field"),
+            N(TK::Semicolon, ";"),
+        }),
+      L(0, PP::kAlwaysExpand,
+        {
+            N(TK::CloseBrace, "}"),
+            N(TK::Identifier, "baz_t"),
+            N(TK::Semicolon, ";"),
+        }),
+  };
+
+  EXPECT_EQ(snap(result.lines), expected);
+}
+
+TEST_F(TreeUnwrapperTest, TypedefEnumOneEntryPerLine) {
+  auto result = parseWithDiagnostics("typedef enum logic {A, B} e_t;");
+
+  EXPECT_TRUE(result.warnings.empty());
+
+  const std::vector<LineSnap> expected = {
+      L(0, PP::kFitOnLineElseExpand,
+        {
+            N(TK::TypedefKeyword, "typedef"),
+            N(TK::EnumKeyword, "enum"),
+            N(TK::LogicKeyword, "logic"),
+            N(TK::OpenBrace, "{"),
+        }),
+      L(kIndent, PP::kAlwaysExpand,
+        {
+            N(TK::Identifier, "A"),
+            N(TK::Comma, ","),
+        }),
+      L(kIndent, PP::kAlwaysExpand,
+        {
+            N(TK::Identifier, "B"),
+        }),
+      L(0, PP::kAlwaysExpand,
+        {
+            N(TK::CloseBrace, "}"),
+            N(TK::Identifier, "e_t"),
+            N(TK::Semicolon, ";"),
+        }),
+  };
+
+  EXPECT_EQ(snap(result.lines), expected);
 }
 
 // NOLINTEND(misc-use-internal-linkage,bugprone-throwing-static-initialization,cert-err58-cpp,cppcoreguidelines-owning-memory,modernize-use-trailing-return-type)

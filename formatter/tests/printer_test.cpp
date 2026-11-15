@@ -29,8 +29,7 @@ class PrinterTest : public ::testing::Test {
 
 TEST_F(PrinterTest, PrintsFormattedCode) {
   EXPECT_EQ(formatText("module m (); logic a; endmodule"),
-            "module m (\n"
-            ");\n"
+            "module m ();\n"
             "  logic a;\n"
             "endmodule\n");
 }
@@ -47,10 +46,9 @@ TEST_F(PrinterTest, FormatsMacroInvocationAcrossSourceLines) {
   const std::string source =
       "module m(); initial $display(`__LINE__); endmodule\n";
   EXPECT_EQ(formatText(source),
-            "module m (\n"
-            ");\n"
+            "module m ();\n"
             "  initial\n"
-            "    $display (`__LINE__);\n"
+            "    $display(`__LINE__);\n"
             "endmodule\n");
 }
 
@@ -62,10 +60,9 @@ TEST_F(PrinterTest, FormatsUnknownMacroCallWithoutWarning) {
   const auto result = format::format(tokens, format::FormatStyle::defaults(),
                                      ctx.source_text());
   EXPECT_EQ(result.formatted_text,
-            "module m (\n"
-            ");\n"
+            "module m ();\n"
             "  initial\n"
-            "    $display (`EXTERNAL (1));\n"
+            "    $display(`EXTERNAL(1));\n"
             "endmodule\n");
   EXPECT_TRUE(result.warnings.empty());
 }
@@ -87,10 +84,9 @@ TEST_F(PrinterTest, FormatsStringifiedMacroInvocation) {
   EXPECT_EQ(result.formatted_text,
             "module m;\n"
             "`define show(expr) $display(`\"expr`\")\n"
-            "  initial\n"
-            "    begin\n"
-            "      `show ($bits (x));\n"
-            "    end\n"
+            "  initial begin\n"
+            "    `show($bits(x));\n"
+            "  end\n"
             "  logic y;\n"
             "endmodule\n");
   EXPECT_TRUE(result.warnings.empty());
@@ -113,10 +109,9 @@ TEST_F(PrinterTest, FormatsMacroFromIncludedFile) {
   EXPECT_EQ(result.formatted_text,
             "module m;\n"
             "`include \"defs.svh\"\n"
-            "  initial\n"
-            "    begin\n"
-            "      `SHOW ($bits (x));\n"
-            "    end\n"
+            "  initial begin\n"
+            "    `SHOW($bits(x));\n"
+            "  end\n"
             "  logic y;\n"
             "endmodule\n");
   EXPECT_TRUE(result.warnings.empty());
@@ -133,9 +128,9 @@ TEST_F(PrinterTest, FormatsNestedMacroCalls) {
       "  logic   y ;\n"
       "endmodule\n";
   const auto formatted = formatText(source);
-  EXPECT_NE(formatted.find("`OUTER ($bits (x), `INNER (a + b))"),
+  EXPECT_NE(formatted.find("`OUTER($bits(x), `INNER(a + b))"),
             std::string::npos);
-  EXPECT_NE(formatted.find("`NEXT (c + d)"), std::string::npos);
+  EXPECT_NE(formatted.find("`NEXT(c + d)"), std::string::npos);
   EXPECT_NE(formatted.find("  logic y;"), std::string::npos);
 }
 
@@ -173,10 +168,9 @@ TEST_F(PrinterTest, KeepsBeginAndForkLabelsOnOpeningLine) {
       "endmodule\n";
   const std::string expected =
       "module m;\n"
-      "  always_comb\n"
-      "    begin : blk\n"
-      "      a = b;\n"
-      "    end\n"
+      "  always_comb begin : blk\n"
+      "    a = b;\n"
+      "  end\n"
       "  initial\n"
       "    fork : fblk\n"
       "      a = b;\n"
@@ -212,8 +206,8 @@ TEST_F(PrinterTest, SplitsInstanceParametersWithoutDirectives) {
 
   const auto formatted = formatText(source);
   EXPECT_NE(formatted.find("child #(\n"), std::string::npos);
-  EXPECT_NE(formatted.find("\n  .A (1),\n"), std::string::npos);
-  EXPECT_NE(formatted.find("\n  .B (2)\n"), std::string::npos);
+  EXPECT_NE(formatted.find("\n  .A(1),\n"), std::string::npos);
+  EXPECT_NE(formatted.find("\n  .B(2)\n"), std::string::npos);
   EXPECT_EQ(formatText(formatted), formatted);
 }
 
@@ -418,8 +412,7 @@ TEST_F(PrinterTest, RespectsCrLfLineTerminator) {
   style.line_terminator = format::LineTerminator::kCrLf;
 
   EXPECT_EQ(formatText("module m (); endmodule", style),
-            "module m (\r\n"
-            ");\r\n"
+            "module m ();\r\n"
             "endmodule\r\n");
 }
 
@@ -428,8 +421,7 @@ TEST_F(PrinterTest, PreservesLeadingAndTrailingLineComments) {
                        "// body\n"
                        "logic a; // data\n"
                        "endmodule"),
-            "module m (\n"
-            "); // header\n"
+            "module m (); // header\n"
             "  // body\n"
             "  logic a; // data\n"
             "endmodule\n");
@@ -450,25 +442,22 @@ TEST_F(PrinterTest, PreservesWhitespaceAroundInlineBlockComments) {
   EXPECT_EQ(formatText("module m (); assign y = a/*tight*/b; "
                        "assign z = a /*left*/b; assign w = a/*right*/ b; "
                        "assign v = a /*both*/ b; endmodule"),
-            "module m (\n"
-            ");\n"
-            "  assign y  = a/*tight*/b;\n"
-            "  assign z  = a /*left*/b;\n"
-            "  assign w  = a/*right*/ b;\n"
-            "  assign v  = a /*both*/ b;\n"
+            "module m ();\n"
+            "  assign y = a/*tight*/b;\n"
+            "  assign z = a /*left*/b;\n"
+            "  assign w = a/*right*/ b;\n"
+            "  assign v = a /*both*/ b;\n"
             "endmodule\n");
 }
 
 TEST_F(PrinterTest, PreservesWhitespaceBeforeTrailingLineComments) {
   EXPECT_EQ(formatText("module m (); logic a;   // spaced\nendmodule"),
-            "module m (\n"
-            ");\n"
+            "module m ();\n"
             "  logic a;   // spaced\n"
             "endmodule\n");
 
   EXPECT_EQ(formatText("module m (); logic a;// tight\nendmodule"),
-            "module m (\n"
-            ");\n"
+            "module m ();\n"
             "  logic a;// tight\n"
             "endmodule\n");
 }
@@ -525,8 +514,7 @@ TEST_F(PrinterTest, PrintsCompilerDirectivesAtLeftEdge) {
                        "`include \"defs.svh\"\n"
                        "`endif\n"
                        "endmodule"),
-            "module m (\n"
-            ");\n"
+            "module m ();\n"
             "`ifdef FOO\n"
             "  assign y = 8'd0;\n"
             "`include \"defs.svh\"\n"
@@ -537,11 +525,10 @@ TEST_F(PrinterTest, PrintsCompilerDirectivesAtLeftEdge) {
 TEST_F(PrinterTest, NormalizesNumericLiteralTextBeforeFormatting) {
   EXPECT_EQ(formatText("module m (); assign y = 8'HFF; assign z = 'X; "
                        "assign r = 1E-3; endmodule"),
-            "module m (\n"
-            ");\n"
-            "  assign y  = 8'hff;\n"
-            "  assign z  = 'x;\n"
-            "  assign r  = 1e-3;\n"
+            "module m ();\n"
+            "  assign y = 8'hff;\n"
+            "  assign z = 'x;\n"
+            "  assign r = 1e-3;\n"
             "endmodule\n");
 }
 
@@ -592,8 +579,7 @@ TEST_F(PrinterTest, BoundsSearchForNestedTernaryExpressions) {
 TEST_F(PrinterTest, DoesNotInsertBeginEndDuringNormalization) {
   EXPECT_EQ(formatText("module m (); always_ff @(posedge clk) if (en) q <= d; "
                        "endmodule"),
-            "module m (\n"
-            ");\n"
+            "module m ();\n"
             "  always_ff @(posedge clk)\n"
             "    if (en) q <= d;\n"
             "endmodule\n");

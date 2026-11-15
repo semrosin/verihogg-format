@@ -5,6 +5,7 @@
 #include <concepts>
 #include <cstdint>
 #include <iostream>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -25,6 +26,9 @@ struct UnwrappedLine {
   std::vector<Token> tokens{};
   std::string raw_text;
   bool is_opaque = false;
+  // Byte offset of raw_text in the original source (opaque lines only).
+  // Lets the printer map diagnostics inside verbatim regions to output lines.
+  std::optional<size_t> source_offset = std::nullopt;
 
   IndentLevel indentation_spaces = 0;
   // Syntactic nesting survives even when the style prints no indentation.
@@ -33,6 +37,10 @@ struct UnwrappedLine {
   // Layout policies must not erase this provenance.
   bool is_fallback = false;
   PartitionPolicy partition_policy = PartitionPolicy::kAlwaysExpand;
+  // Index of the ':' that terminates a case-item label (set by
+  // TreeUnwrapper::parseCaseItem). Survives the label/begin merge because the
+  // merge moves the whole label line.
+  std::optional<size_t> case_label_colon = std::nullopt;
 
   auto map(std::invocable<Token&&> auto&& func) && -> UnwrappedLine<
       std::invoke_result_t<decltype(func), Token&&>> {
@@ -48,10 +56,12 @@ struct UnwrappedLine {
         .tokens = std::move(tokens),
         .raw_text = std::move(this->raw_text),
         .is_opaque = this->is_opaque,
+        .source_offset = this->source_offset,
         .indentation_spaces = this->indentation_spaces,
         .nesting_level = this->nesting_level,
         .is_fallback = this->is_fallback,
         .partition_policy = this->partition_policy,
+        .case_label_colon = this->case_label_colon,
     };
   }
 
@@ -68,10 +78,12 @@ struct UnwrappedLine {
         .tokens = std::move(tokens),
         .raw_text = this->raw_text,
         .is_opaque = this->is_opaque,
+        .source_offset = this->source_offset,
         .indentation_spaces = this->indentation_spaces,
         .nesting_level = this->nesting_level,
         .is_fallback = this->is_fallback,
         .partition_policy = this->partition_policy,
+        .case_label_colon = this->case_label_colon,
     };
   }
 };

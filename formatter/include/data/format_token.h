@@ -46,6 +46,10 @@ enum class TokenType : uint8_t {
   // Delimiters
   kSemicolon,
   kColon,
+  kRangeColon,            // ':' in [...]
+  kCaseLabelColon,        // ':' terminating a case-item label line
+  kReplicationOpenBrace,  // '{' in {N{...}}
+  kIndexedOperator,       // -, +, *, /, ... in [...]
   kComma,
   kDot,
   kHash,
@@ -93,7 +97,8 @@ enum class TokenType : uint8_t {
   kIntegerBase,
   kEdgeKeyword,
   kAssignKeyword,
-  kDirective,
+  kDirective,   // `ifdef, `define, `include — compiler directive
+  kMacroUsage,  // `SCR1_XLEN, `Width — macro invocation (operand)
   kTernaryOperator,
   kSvaBinaryOperator,
   kSvaKeyword

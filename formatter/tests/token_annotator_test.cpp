@@ -157,12 +157,13 @@ TEST_F(TokenAnnotatorTest, DirectiveArgumentMustStayWithMatchingParen) {
 
   const FT* argument = nullptr;
   for (size_t i = 0; i + 1 < line.tokens.size(); ++i) {
-    if (line.tokens.at(i).type == format::TokenType::kDirective) {
+    if (line.tokens.at(i).type == format::TokenType::kDirective ||
+        line.tokens.at(i).type == format::TokenType::kMacroUsage) {
       argument = &line.tokens.at(i + 1);
       break;
     }
   }
-  ASSERT_NE(argument, nullptr) << "No token after directive";
+  ASSERT_NE(argument, nullptr) << "No token after directive/macro usage";
   EXPECT_EQ(argument->before.break_decision,
             format::BreakDecision::kMustNotBreak)
       << "Token after directive keyword must not break";

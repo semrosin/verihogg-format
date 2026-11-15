@@ -83,6 +83,7 @@ enum class Context : uint8_t {
   kPortList,
   kParameterList,
   kExpression,
+  kIndex,
   kInstancePorts,
   kConcatenation,
   kCaseBody,
@@ -145,7 +146,8 @@ auto TokenAnnotator::matchBrackets(gsl::span<FormatToken> tokens) const
 // Pass 2: determineTokenTypes
 // ---------------------------------------------------------------------------
 
-auto TokenAnnotator::determineTokenTypes(gsl::span<FormatToken> tokens) const
+auto TokenAnnotator::determineTokenTypes(
+    gsl::span<FormatToken> tokens, std::optional<size_t> label_colon) const
     -> void {
   std::stack<Context> ctx;
   ctx.push(Context::kTopLevel);
@@ -274,8 +276,9 @@ auto TokenAnnotator::determineTokenTypes(gsl::span<FormatToken> tokens) const
         continue;
 
       case TK::DefaultKeyword:
-        ft.type = (ctx.top() == Context::kCaseBody) ? TokenType::kDefaultKeyword
-                                                    : TokenType::kUnknown;
+        // A case-item label line starts with 'default' and ends with ':'.
+        ft.type = (label_colon && i == 0) ? TokenType::kDefaultKeyword
+                                          : TokenType::kUnknown;
         continue;
 
       // -- Separators ----------------------------------------------------
@@ -284,7 +287,12 @@ auto TokenAnnotator::determineTokenTypes(gsl::span<FormatToken> tokens) const
         continue;
 
       case TK::Colon:
-        ft.type = TokenType::kColon;
+        if (label_colon && i == *label_colon) {
+          ft.type = TokenType::kCaseLabelColon;
+        } else {
+          ft.type = (ctx.top() == Context::kIndex) ? TokenType::kRangeColon
+                                                   : TokenType::kColon;
+        }
         continue;
 
       case TK::Comma:
@@ -329,12 +337,13 @@ auto TokenAnnotator::determineTokenTypes(gsl::span<FormatToken> tokens) const
       case TK::VoidKeyword:
       case TK::CHandleKeyword:
       case TK::EventKeyword:
+      case TK::UnsignedKeyword:
+      case TK::SignedKeyword:
+      case TK::PackedKeyword:
       case TK::TypedefKeyword:
       case TK::EnumKeyword:
       case TK::StructKeyword:
       case TK::UnionKeyword:
-      case TK::UnsignedKeyword:
-      case TK::SignedKeyword:
         ft.type = TokenType::kTypeKeyword;
         continue;
 
@@ -375,7 +384,8 @@ auto TokenAnnotator::determineTokenTypes(gsl::span<FormatToken> tokens) const
       case TK::Slash:
       case TK::Percent:
       case TK::DoubleStar:
-        ft.type = TokenType::kBinaryOperator;
+        ft.type = (ctx.top() == Context::kIndex) ? TokenType::kIndexedOperator
+                                                 : TokenType::kBinaryOperator;
         continue;
 
       // -- Potentially unary -------------------------------------------
@@ -386,10 +396,17 @@ auto TokenAnnotator::determineTokenTypes(gsl::span<FormatToken> tokens) const
       case TK::Or:
       case TK::Xor:
       case TK::XorTilde:
-        ft.type = isOperand(prev_kind) ? TokenType::kBinaryOperator
-                                       : TokenType::kUnaryOperator;
+        if (ctx.top() == Context::kIndex) {
+          ft.type = TokenType::kIndexedOperator;
+        } else if ((prev_kind == TK::Unknown &&
+                    (kind == TK::And || kind == TK::Or || kind == TK::Xor)) ||
+                   prev_type == TokenType::kMacroUsage ||
+                   isOperand(prev_kind)) {
+          ft.type = TokenType::kBinaryOperator;
+        } else {
+          ft.type = TokenType::kUnaryOperator;
+        }
         continue;
-
       // -- Unambiguously unary ---------------------------------------------
       case TK::Tilde:
       case TK::TildeAnd:
@@ -421,7 +438,7 @@ auto TokenAnnotator::determineTokenTypes(gsl::span<FormatToken> tokens) const
 
       case TK::OpenBracket:
         ft.type = TokenType::kGeneric;
-        ctx.push(Context::kExpression);
+        ctx.push(Context::kIndex);
         continue;
 
       case TK::CloseBracket:
@@ -433,6 +450,12 @@ auto TokenAnnotator::determineTokenTypes(gsl::span<FormatToken> tokens) const
 
       case TK::OpenBrace:
         ft.type = TokenType::kGeneric;
+        if (ctx.top() == Context::kConcatenation &&
+            (prev_kind == TK::IntegerLiteral || prev_kind == TK::Identifier ||
+             prev_kind == TK::CloseParenthesis ||
+             prev_type == TokenType::kMacroUsage)) {
+          ft.type = TokenType::kReplicationOpenBrace;
+        }
         ctx.push(Context::kConcatenation);
         continue;
 
@@ -446,19 +469,22 @@ auto TokenAnnotator::determineTokenTypes(gsl::span<FormatToken> tokens) const
       // -- Identifiers -------------------------------------------------
       case TK::Identifier:
       case TK::SystemIdentifier: {
-        if (next_is_module_name) {
+        // TreeUnwrapper (parseInstantiation) puts the closing ')' of a
+        // '#(...)' parameter list at the start of the instance-name line.
+        // The identifier that follows is the instance name.
+        if (i == 1 && tokens[0].token.kind == TK::CloseParenthesis) {
+          ft.type = TokenType::kInstanceName;
+        } else if (next_is_module_name) {
           ft.type = TokenType::kModuleName;
           next_is_module_name = false;
-        } else if (next_is_instance_name) {
-          ft.type = TokenType::kInstanceName;
+        } else if (next_is_instance_name || prev_type == TokenType::kTypeName) {
           next_is_instance_name = false;
+          ft.type = TokenType::kInstanceName;
         } else if ((prev_type == TokenType::kDot &&
                     ctx.top() == Context::kInstancePorts) ||
                    (prev_type == TokenType::kPortDirection ||
                     prev_type == TokenType::kTypeKeyword)) {
           ft.type = TokenType::kPortName;
-        } else if (prev_type == TokenType::kTypeName) {
-          ft.type = TokenType::kInstanceName;
         } else if (prev_kind == TK::Identifier &&
                    prev_type == TokenType::kGeneric) {
           tokens[i - 1].type = TokenType::kTypeName;
@@ -489,7 +515,8 @@ auto TokenAnnotator::determineTokenTypes(gsl::span<FormatToken> tokens) const
         continue;
 
       case TK::Directive:
-        ft.type = TokenType::kDirective;
+        ft.type = isCompilerDirective(ft.token) ? TokenType::kDirective
+                                                : TokenType::kMacroUsage;
         continue;
 
       case TK::OrMinusArrow:  // |->
@@ -545,9 +572,11 @@ auto implSpacesRequired(TokenPair p) -> size_t {
     return 1;
   }
 
-  if (rk == TK::IntegerBase) {
+  if (rk == TK::IntegerBase &&
+      (lk == TK::IntegerLiteral || left.type == TokenType::kMacroUsage)) {
     return 0;
-  }  // "2" + "'b" → "2'b"
+  }  // "2" + "'b" → "2'b", "`XLEN" + "'h" → "`XLEN'h"
+
   if (lk == TK::IntegerBase) {
     return 0;
   }  // "'b" + "00" → "'b00"
@@ -560,8 +589,8 @@ auto implSpacesRequired(TokenPair p) -> size_t {
   }
 
   if (rk == TK::ApostropheOpenBrace) {
-    return 0;
-  }  // "logic" + "'{"
+    return 1;  // = '{, <= '{, , '{, return '{ — space before assignment pattern
+  }
   if (lk == TK::ApostropheOpenBrace) {
     return 0;
   }  // "'{" + "..."
@@ -585,6 +614,7 @@ auto implSpacesRequired(TokenPair p) -> size_t {
 
   if (right.token.kind == TK::Apostrophe &&
       (left.token.kind == TK::Identifier || left.type == TokenType::kTypeName ||
+       left.type == TokenType::kMacroUsage ||
        left.token.kind == TK::IntegerLiteral)) {
     return 0;  // type'(...) for cast
   }
@@ -608,6 +638,17 @@ auto implSpacesRequired(TokenPair p) -> size_t {
       rk == TK::CloseBracket || rk == TK::CloseBrace) {
     return 0;
   }
+  // Compact indices must not merge adjacent operators into ++, --, &&, etc.
+  const auto is_operator = [](TokenType type) {
+    return type == TokenType::kIndexedOperator ||
+           type == TokenType::kUnaryOperator ||
+           type == TokenType::kBinaryOperator;
+  };
+  if ((left.type == TokenType::kIndexedOperator ||
+       right.type == TokenType::kIndexedOperator) &&
+      is_operator(left.type) && is_operator(right.type)) {
+    return 1;
+  }
   if (left.type == TokenType::kUnaryOperator) {
     return 0;
   }
@@ -619,6 +660,39 @@ auto implSpacesRequired(TokenPair p) -> size_t {
   }
   if (left.type == TokenType::kAtSign) {
     return 0;
+  }
+  // Inside [...]: no spaces around ':' or operators.
+  if (right.type == TokenType::kRangeColon ||
+      left.type == TokenType::kRangeColon ||
+      right.type == TokenType::kIndexedOperator ||
+      left.type == TokenType::kIndexedOperator) {
+    return 0;
+  }
+  // Case item: no whitespace before the label colon, one space after it.
+  if (right.type == TokenType::kCaseLabelColon) {
+    return 0;
+  }
+  if (right.token.kind == TK::OpenBracket &&
+      (left.token.kind == TK::Identifier ||
+       left.token.kind == TK::SystemIdentifier ||
+       left.token.kind == TK::CloseBracket ||
+       left.token.kind == TK::CloseParenthesis)) {
+    return 0;
+  }
+  // Module and instance names keep a space before their port-list '('
+  if (right.token.kind == TK::OpenParenthesis &&
+      (left.type == TokenType::kModuleName ||
+       left.type == TokenType::kInstanceName)) {
+    return 1;
+  }
+  if (right.token.kind == TK::OpenParenthesis &&
+      (left.token.kind == TK::Identifier ||
+       left.token.kind == TK::SystemIdentifier ||
+       left.type == TokenType::kMacroUsage)) {
+    return 0;
+  }
+  if (right.type == TokenType::kReplicationOpenBrace) {
+    return 0;  // {N{...}}, {$bits(...){...}}
   }
   return 1;
 }
@@ -662,10 +736,16 @@ auto implBreakDecision(TokenPair p) -> BreakDecision {
   const FormatToken& left = *p.left;
   const FormatToken& right = *p.right;
 
+  // Never break between a module/instance name and its port-list '('.
+  if (right.token.kind == TK::OpenParenthesis &&
+      (left.type == TokenType::kModuleName ||
+       left.type == TokenType::kInstanceName)) {
+    return BreakDecision::kMustNotBreak;
+  }
   if (implSpacesRequired(p) == 0 && right.balancing != GroupBalancing::kClose) {
     return BreakDecision::kMustNotBreak;
   }
-  if (right.type == TokenType::kDirective && isCompilerDirective(right.token)) {
+  if (right.type == TokenType::kDirective) {
     return BreakDecision::kMustBreak;
   }
   if (left.type == TokenType::kDirective) {
@@ -675,13 +755,27 @@ auto implBreakDecision(TokenPair p) -> BreakDecision {
       right.type != TokenType::kColon) {
     return BreakDecision::kMustBreak;
   }
+  if (isBlockEnd(left.type) && right.type == TokenType::kColon) {
+    return BreakDecision::kMustNotBreak;
+  }
+  if (left.type == TokenType::kEndKeyword &&
+      right.type == TokenType::kElseKeyword) {
+    return BreakDecision::kMustNotBreak;
+  }
   if (isBlockEnd(right.type) || isBlockEnd(left.type)) {
     return BreakDecision::kMustBreak;
   }
-  if (left.type == TokenType::kSemicolon && right.nesting_level == 0) {
+  if (left.type == TokenType::kSemicolon && left.nesting_level == 0 &&
+      right.nesting_level == 0) {
     return BreakDecision::kMustBreak;
   }
   if (left.type == TokenType::kAssignKeyword) {
+    return BreakDecision::kMustNotBreak;
+  }
+  if (right.type == TokenType::kRangeColon ||
+      left.type == TokenType::kRangeColon ||
+      right.type == TokenType::kIndexedOperator ||
+      left.type == TokenType::kIndexedOperator) {
     return BreakDecision::kMustNotBreak;
   }
   return BreakDecision::kUndecided;
@@ -757,9 +851,11 @@ auto implComputeInterTokenInfo(gsl::span<FormatToken> tokens) -> void {
 // annotateSpan — three passes over a contiguous buffer
 // ---------------------------------------------------------------------------
 
-auto TokenAnnotator::annotateSpan(gsl::span<FormatToken> tokens) const -> void {
+auto TokenAnnotator::annotateSpan(gsl::span<FormatToken> tokens,
+                                  std::optional<size_t> label_colon) const
+    -> void {
   matchBrackets(tokens);
-  determineTokenTypes(tokens);
+  determineTokenTypes(tokens, label_colon);
   implComputeInterTokenInfo(tokens);
 }
 
@@ -768,7 +864,7 @@ auto TokenAnnotator::annotateUnwrappedLine(
   if (line.tokens.empty()) {
     return;
   }
-  annotateSpan(line.tokens);
+  annotateSpan(line.tokens, line.case_label_colon);
 }
 
 namespace {
@@ -835,8 +931,9 @@ struct AnnotationFailure {
     }
     if (isClose(kind)) {
       if (bracket_stack.empty()) {
-        // A module or parameter list can close on its own unwrapped line.
-        if (kind != TK::CloseParenthesis || i != 0) {
+        // A module, parameter, port or type-body list can close on its own
+        // unwrapped line.
+        if (i != 0) {
           return AnnotationFailure{.location = token.location(),
                                    .reason = "unmatched closing bracket"};
         }
@@ -936,6 +1033,7 @@ auto TokenAnnotator::annotateWithDiagnostics(
           .code = "invalid-annotation",
           .message = "cannot annotate SystemVerilog line (" + failure->reason +
                      "); original text preserved",
+          .construct = failure->reason,
       });
     }
   }
@@ -984,6 +1082,8 @@ auto TokenAnnotator::annotateWithDiagnostics(
           .raw_text = std::string(
               original_source.substr(source_cursor, raw_end - source_cursor)),
           .is_opaque = true,
+          .source_offset = source_cursor,
+          .case_label_colon = std::nullopt,
       });
     }
     source_cursor = raw_end;
