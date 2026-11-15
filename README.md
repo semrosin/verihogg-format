@@ -401,6 +401,32 @@ ctest --output-on-failure --test-dir build
 
 CI runs several checks on each push and pull request, including build, Docker image build, static analysis, and formatting.
 
+### sv-tests report
+
+The `sv-tests report` workflow runs the checked-out formatter against the
+VerihoggFormat runner in sv-tests on pushes to `main`, daily at 02:00 UTC,
+and on manual dispatch. It publishes the sv-tests table together
+with `unsupported.html` and `constructs.html` to this repository's GitHub
+Pages site. The report is
+also available as the `sv-tests-report` workflow artifact for 14 days. Test
+failures are shown in the report; infrastructure or report-generation failures
+stop publication and leave the last successful site in place.
+
+The workflow pins the sv-tests revision and retrieves only the two report
+generators from a pinned `sv-tests-results` revision. The formatter and Slang
+are built using this repository's Nix lock file. The generated table links to
+the formatter commit used in the run. Updating either pinned revision requires
+checking runner compatibility and report generation again. The full test suite
+also checks out the test and core submodules and can take substantial time and
+disk space on a GitHub-hosted runner.
+
+For deployment, repository settings must enable Pages with **GitHub Actions**
+as the source and allow the workflow to deploy to the `github-pages`
+environment. Manual runs on branches other than `main` build an artifact but
+do not deploy it. A workflow added on a branch must be
+available on the default branch before it can be started with
+`workflow_dispatch` in GitHub Actions.
+
 ---
 
 ## Contributing
