@@ -21,10 +21,22 @@ old = 'self.url = f"https://github.com/verihogg/verihogg-format/tree/{self.get_c
 new = 'self.url = "https://github.com/{}/tree/{}".format(os.environ["FORMATTER_REPOSITORY"], os.environ["FORMATTER_SHA"])'
 if source.count(old) != 1:
     raise SystemExit('Unexpected VerihoggFormat runner URL; review the pinned runner')
-runner.write_text(source.replace(old, new), encoding='utf-8')
+source = source.replace(old, new)
+# The formatter lexes each file directly and does not accept -I or -D.
+# Keep include paths and defines for the separate Slang CST comparison.
+old_args = '''        fmt_cmd += include_args(formatted_dir)
+        fmt_cmd += [f"-D{d}" for d in params['defines']]
+'''
+if source.count(old_args) != 1:
+    raise SystemExit('Unexpected VerihoggFormat arguments; review the pinned runner')
+runner.write_text(source.replace(old_args, ''), encoding='utf-8')
 PY
 make info
 SLANG_DRIVER=$(command -v slang-driver) python3 -m unittest discover -s tools/tests -v
+
+# A successful exit code alone is insufficient: the CLI can return zero when
+# rejecting arguments. Exercise the real runner and verify changed output.
+python3 "$GITHUB_WORKSPACE/formatter/scripts/sv-tests-runner-smoke.py"
 
 # Match the sv-tests CI order; fusesoc and black-parrot use more resources.
 generators=$(make list-generators)
@@ -52,7 +64,26 @@ test -n "$(find out/report/results/verihoggformat -name '*.config.js' -print -qu
 test -d out/report/logs
 test -d out/report/tests
 python3 "$generators_dir/sv_tests_unsupported_report.py" --report out/report
-python3 "$generators_dir/sv_tests_warning_constructs.py" --report out/report
+PYTHONPATH="$generators_dir" python3 - "$generators_dir" <<'PY'
+from pathlib import Path
+import subprocess
+import sys
+from sv_tests_unsupported_report import load_tests
+from sv_tests_warning_constructs import render_page
+
+root = Path('out/report').resolve()
+tests = load_tests(root)
+if not tests:
+    raise SystemExit('No VerihoggFormat tests in report')
+output = root / 'constructs.html'
+if any(test.status == 'warning' for test in tests):
+    subprocess.run([sys.executable, str(Path(sys.argv[1]) /
+                   'sv_tests_warning_constructs.py'), '--report', str(root)],
+                   check=True)
+else:
+    output.write_text(render_page({}, root, output), encoding='utf-8')
+    print('Report: no warning constructs')
+PY
 test -s out/report/index.html
 test -s out/report/unsupported.html
 test -s out/report/constructs.html

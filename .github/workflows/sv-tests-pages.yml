@@ -81,6 +81,17 @@ jobs:
           FORMATTER_REPOSITORY: ${{ github.repository }}
         run: bash "$GITHUB_WORKSPACE/formatter/scripts/sv-tests-report.sh" "$GITHUB_WORKSPACE/report-generators/tools"
 
+      - name: Upload incomplete report for debugging
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sv-tests-incomplete-report
+          path: |
+            sv-tests/out/report/
+            sv-tests/out/logs/VerihoggFormat/
+          if-no-files-found: ignore
+          retention-days: 7
+
       - name: Upload report for inspection
         uses: actions/upload-artifact@v4
         with:
