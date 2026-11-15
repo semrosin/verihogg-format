@@ -31,7 +31,7 @@ jobs:
         with:
           repository: verihogg/sv-tests
           # Includes the formatter report landing page; update deliberately.
-          ref: 73f33df37394f46655ef7db47cf1600ac5854f44
+          ref: 184d433dc32ea4af8df652d442f471a8a9716df2
           path: sv-tests
 
       - name: Checkout report generators only
