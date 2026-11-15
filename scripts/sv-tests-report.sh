@@ -29,7 +29,20 @@ old_args = '''        fmt_cmd += include_args(formatted_dir)
 '''
 if source.count(old_args) != 1:
     raise SystemExit('Unexpected VerihoggFormat arguments; review the pinned runner')
-runner.write_text(source.replace(old_args, ''), encoding='utf-8')
+source = source.replace(old_args, '')
+# Newer formatter versions print an aggregated summary instead of individual
+# Warning lines. Keep both formats so warning statuses remain meaningful.
+old_warnings = '''        warning_count = len(re.findall(r"^Warning(?: in\\b|:)", fmt_log,
+                                       re.MULTILINE))'''
+new_warnings = '''        warning_count = len(re.findall(r"^Warning(?: in\\b|:)", fmt_log,
+                                       re.MULTILINE))
+        if "The formatter does not support these constructs yet" in fmt_log:
+            warning_count += sum(int(count) for count in re.findall(
+                r"^  - .+?\\s{2,}(\\d+) occurrences?,\\s+first at ",
+                fmt_log, re.MULTILINE))'''
+if source.count(old_warnings) != 1:
+    raise SystemExit('Unexpected VerihoggFormat warning handling; review the pinned runner')
+runner.write_text(source.replace(old_warnings, new_warnings), encoding='utf-8')
 PY
 make info
 SLANG_DRIVER=$(command -v slang-driver) python3 -m unittest discover -s tools/tests -v
