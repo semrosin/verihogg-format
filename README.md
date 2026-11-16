@@ -226,8 +226,8 @@ Dockerfile           Docker image assembled from the Nix build
 ### sv-tests report
 
 The `sv-tests report` workflow runs the checked-out formatter against the
-VerihoggFormat runner in sv-tests on pushes to `main`, daily at 02:00 UTC,
-and on manual dispatch. It publishes the sv-tests table together
+VerihoggFormat runner in sv-tests on pushes to `main` and on manual dispatch.
+It publishes the sv-tests table together
 with `unsupported.html` and `constructs.html` to this repository's GitHub
 Pages site. The landing page links to the test table and the detailed
 unsupported constructs report. The report is
