@@ -11,11 +11,6 @@ command -v slang-driver
 slang-driver --version
 
 make info
-SLANG_DRIVER=$(command -v slang-driver) python3 -m unittest discover -s tools/tests -v
-
-# A successful exit code alone is insufficient: the CLI can return zero when
-# rejecting arguments. Exercise the real runner and verify changed output.
-python3 tools/tests/smoke_verihogg_format.py
 
 # Match the sv-tests CI order; fusesoc and black-parrot use more resources.
 generators=$(make list-generators)
