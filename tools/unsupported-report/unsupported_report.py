@@ -401,7 +401,7 @@ def render_html(
         f"<tbody>{body}</tbody></table>"
         "</section>\n"
         f"{error_section}\n"
-        f'<p class="muted">Formatter: <code>{html.escape(formatter)}</code></p>\n'
+        f'<p class="muted">Formatter: <code>{html.escape(Path(formatter).name)}</code></p>\n'
         "</main>\n</body>\n</html>\n"
     )
 
