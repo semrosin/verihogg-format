@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <stdexcept>
+#include <string>
 #include <string_view>
 #include <vector>
 
@@ -104,11 +105,37 @@ enum class ModuleBodyIndentation : uint8_t {
   kNone,
 };
 
+[[nodiscard]] inline auto moduleBodyIndentationFromString(
+    std::string_view value) -> ModuleBodyIndentation {
+  if (value == "indent") {
+    return ModuleBodyIndentation::kIndent;
+  }
+  if (value == "none") {
+    return ModuleBodyIndentation::kNone;
+  }
+  throw std::invalid_argument("Unknown module body indentation: " +
+                              std::string(value));
+}
+
 enum class ListOpening : uint8_t {
   kSameLine,
   kNextLine,
   kPreserve,
 };
+
+[[nodiscard]] inline auto listOpeningFromString(std::string_view value)
+    -> ListOpening {
+  if (value == "same-line") {
+    return ListOpening::kSameLine;
+  }
+  if (value == "next-line") {
+    return ListOpening::kNextLine;
+  }
+  if (value == "preserve") {
+    return ListOpening::kPreserve;
+  }
+  throw std::invalid_argument("Unknown list opening: " + std::string(value));
+}
 
 enum class DimensionSpacing : uint8_t {
   kCompact,
@@ -116,21 +143,75 @@ enum class DimensionSpacing : uint8_t {
   kPreserve,
 };
 
+[[nodiscard]] inline auto dimensionSpacingFromString(std::string_view value)
+    -> DimensionSpacing {
+  if (value == "compact") {
+    return DimensionSpacing::kCompact;
+  }
+  if (value == "space") {
+    return DimensionSpacing::kSpace;
+  }
+  if (value == "preserve") {
+    return DimensionSpacing::kPreserve;
+  }
+  throw std::invalid_argument("Unknown dimension spacing: " +
+                              std::string(value));
+}
+
 enum class ParenAlignment : uint8_t {
   kOpening,
   kBoth,
 };
+
+[[nodiscard]] inline auto parenAlignmentFromString(std::string_view value)
+    -> ParenAlignment {
+  if (value == "opening") {
+    return ParenAlignment::kOpening;
+  }
+  if (value == "both") {
+    return ParenAlignment::kBoth;
+  }
+  throw std::invalid_argument("Unknown parenthesis alignment: " +
+                              std::string(value));
+}
 
 enum class ParenPadding : uint8_t {
   kCompact,
   kSpaced,
 };
 
+[[nodiscard]] inline auto parenPaddingFromString(std::string_view value)
+    -> ParenPadding {
+  if (value == "compact") {
+    return ParenPadding::kCompact;
+  }
+  if (value == "spaced") {
+    return ParenPadding::kSpaced;
+  }
+  throw std::invalid_argument("Unknown parenthesis padding: " +
+                              std::string(value));
+}
+
 enum class ListCommaPlacement : uint8_t {
   kLeading,
   kTrailing,
   kPreserve,
 };
+
+[[nodiscard]] inline auto listCommaPlacementFromString(std::string_view value)
+    -> ListCommaPlacement {
+  if (value == "leading") {
+    return ListCommaPlacement::kLeading;
+  }
+  if (value == "trailing") {
+    return ListCommaPlacement::kTrailing;
+  }
+  if (value == "preserve") {
+    return ListCommaPlacement::kPreserve;
+  }
+  throw std::invalid_argument("Unknown list comma placement: " +
+                              std::string(value));
+}
 
 struct RunConfig {
   bool inplace = false;
@@ -203,7 +284,7 @@ struct FormatStyle {
   bool try_wrap_long_lines = defaults::kTryWrapLongLines;
   bool wrap_end_else_clauses = defaults::kWrapEndElseClauses;
 
-  // Reserved style options accepted by the YAML configuration.
+  // Reserved layout options accepted in YAML and on the command line.
   ModuleBodyIndentation module_body_indentation =
       ModuleBodyIndentation::kIndent;
   ListOpening module_parameter_list_opening = ListOpening::kSameLine;

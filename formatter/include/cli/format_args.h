@@ -83,6 +83,18 @@ class FormatArgsBinder {
   std::optional<bool> try_wrap_long_lines_;
   std::optional<bool> wrap_end_else_clauses_;
 
+  std::optional<std::string> module_body_indentation_;
+  std::optional<std::string> module_parameter_list_opening_;
+  std::optional<std::string> module_port_list_opening_;
+  std::optional<std::string> packed_dimension_separator_;
+  std::optional<std::string> spacing_before_unpacked_dimensions_;
+  std::optional<std::string> named_port_paren_alignment_;
+  std::optional<std::string> named_parameter_paren_alignment_;
+  std::optional<std::string> named_port_paren_padding_;
+  std::optional<std::string> named_parameter_paren_padding_;
+  std::optional<std::string> port_list_comma_placement_;
+  std::optional<std::string> parameter_list_comma_placement_;
+
   std::optional<bool> inplace_;
   std::optional<bool> check_;
   std::optional<std::string> config_path_;

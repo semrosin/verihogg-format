@@ -150,7 +150,7 @@ line_terminator: lf
 
 The config is checked against the [JSON Schema](schemas/verihogg-format.schema.json), which is embedded in the binary. Unknown keys and invalid values produce an error with file and source position. The `style` key accepts `default`, `lowrisc`, and `scr1`, but these profiles currently have the same defaults; the latter two are not tuned presets yet.
 
-The schema also reserves YAML-only keys for module body indentation, module list opening placement, dimension spacing, named connection parentheses, and comma placement in port and parameter lists. The loader validates and stores these keys for future formatting support.
+The schema lists reserved settings for module body indentation, module list opening placement, dimension spacing, named connection parentheses, and comma placement in port and parameter lists. These settings are available in YAML and as CLI flags for future formatting support.
 
 ## How it works and current limits
 

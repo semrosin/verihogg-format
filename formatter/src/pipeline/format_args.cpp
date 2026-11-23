@@ -28,6 +28,18 @@ constexpr std::array<std::string_view, 2> kIndentationPolicyValues = {"indent",
 constexpr std::array<std::string_view, 4> kAlignmentGroupBoundaryValues = {
     "none", "blank-lines", "separator-comments",
     "blank-lines-and-separator-comments"};
+constexpr std::array<std::string_view, 2> kModuleBodyIndentationValues = {
+    "indent", "none"};
+constexpr std::array<std::string_view, 3> kListOpeningValues = {
+    "same-line", "next-line", "preserve"};
+constexpr std::array<std::string_view, 3> kDimensionSpacingValues = {
+    "compact", "space", "preserve"};
+constexpr std::array<std::string_view, 2> kParenAlignmentValues = {"opening",
+                                                                   "both"};
+constexpr std::array<std::string_view, 2> kParenPaddingValues = {"compact",
+                                                                 "spaced"};
+constexpr std::array<std::string_view, 3> kListCommaPlacementValues = {
+    "leading", "trailing", "preserve"};
 
 // Describes a long-only option constrained to a fixed set of values.
 struct ChoiceOption {
@@ -95,6 +107,29 @@ Indentation options (indent | wrap, default: wrap):
 Alignment grouping:
       --alignment_group_boundary <rule>  none | blank-lines | separator-comments |
                                          blank-lines-and-separator-comments (default: none)
+
+Module body indentation (indent | none, default: indent):
+      --module_body_indentation
+
+Module list opening (same-line | next-line | preserve, default: same-line):
+      --module_parameter_list_opening
+      --module_port_list_opening
+
+Dimension spacing (compact | space | preserve, default: compact):
+      --packed_dimension_separator
+      --spacing_before_unpacked_dimensions
+
+Named connection parenthesis alignment (opening | both, default: opening):
+      --named_port_paren_alignment
+      --named_parameter_paren_alignment
+
+Named connection parenthesis padding (compact | spaced, default: compact):
+      --named_port_paren_padding
+      --named_parameter_paren_padding
+
+List comma placement (leading | trailing | preserve, default: trailing):
+      --port_list_comma_placement
+      --parameter_list_comma_placement
 
 Boolean options (use --no_<name> to disable):
       --port_declarations_right_align_packed_dimensions
@@ -248,6 +283,65 @@ FormatArgsBinder::FormatArgsBinder() {
   add_negatable_flag(app_, "--wrap_end_else_clauses", wrap_end_else_clauses_,
                      "Place end and else clauses on separate lines");
 
+  add_choice(
+      app_, module_body_indentation_,
+      {.name = "--module_body_indentation",
+       .description = "Additional indentation level for the body of a module",
+       .values = kModuleBodyIndentationValues});
+  add_choice(app_, module_parameter_list_opening_,
+             {.name = "--module_parameter_list_opening",
+              .description = "Placement of the opening #( of a module "
+                             "parameter list relative to the module name",
+              .values = kListOpeningValues});
+  add_choice(
+      app_, module_port_list_opening_,
+      {.name = "--module_port_list_opening",
+       .description = "Placement of the opening ( of a module port list "
+                      "relative to the preceding part of the module header",
+       .values = kListOpeningValues});
+  add_choice(
+      app_, packed_dimension_separator_,
+      {.name = "--packed_dimension_separator",
+       .description =
+           "Whitespace between adjacent packed dimensions in a declaration",
+       .values = kDimensionSpacingValues});
+  add_choice(app_, spacing_before_unpacked_dimensions_,
+             {.name = "--spacing_before_unpacked_dimensions",
+              .description = "Whitespace between a declared name and its first "
+                             "unpacked dimension",
+              .values = kDimensionSpacingValues});
+  add_choice(app_, named_port_paren_alignment_,
+             {.name = "--named_port_paren_alignment",
+              .description = "Align only opening parentheses or both "
+                             "parentheses when named port alignment is enabled",
+              .values = kParenAlignmentValues});
+  add_choice(
+      app_, named_parameter_paren_alignment_,
+      {.name = "--named_parameter_paren_alignment",
+       .description = "Align only opening parentheses or both parentheses when "
+                      "named parameter alignment is enabled",
+       .values = kParenAlignmentValues});
+  add_choice(app_, named_port_paren_padding_,
+             {.name = "--named_port_paren_padding",
+              .description = "Spacing at the edges of an expression inside a "
+                             "named port connection",
+              .values = kParenPaddingValues});
+  add_choice(app_, named_parameter_paren_padding_,
+             {.name = "--named_parameter_paren_padding",
+              .description = "Spacing at the edges of an expression inside a "
+                             "named parameter override",
+              .values = kParenPaddingValues});
+  add_choice(app_, port_list_comma_placement_,
+             {.name = "--port_list_comma_placement",
+              .description = "Placement of an existing comma relative to a "
+                             "line break in a port list",
+              .values = kListCommaPlacementValues});
+  add_choice(app_, parameter_list_comma_placement_,
+             {.name = "--parameter_list_comma_placement",
+              .description = "Placement of an existing comma relative to a "
+                             "line break in a parameter list",
+              .values = kListCommaPlacementValues});
+
   // Positional file arguments are collected by CLI11; -- allows filenames
   // starting with a dash.
   app_.add_option("files", files_, "Source files to format")->type_name("FILE");
@@ -366,6 +460,51 @@ void FormatArgsBinder::applyStyleOverrides(FormatStyle& style) const {
   }
   if (wrap_end_else_clauses_.has_value()) {
     style.wrap_end_else_clauses = *wrap_end_else_clauses_;
+  }
+
+  if (module_body_indentation_.has_value()) {
+    style.module_body_indentation =
+        moduleBodyIndentationFromString(*module_body_indentation_);
+  }
+  if (module_parameter_list_opening_.has_value()) {
+    style.module_parameter_list_opening =
+        listOpeningFromString(*module_parameter_list_opening_);
+  }
+  if (module_port_list_opening_.has_value()) {
+    style.module_port_list_opening =
+        listOpeningFromString(*module_port_list_opening_);
+  }
+  if (packed_dimension_separator_.has_value()) {
+    style.packed_dimension_separator =
+        dimensionSpacingFromString(*packed_dimension_separator_);
+  }
+  if (spacing_before_unpacked_dimensions_.has_value()) {
+    style.spacing_before_unpacked_dimensions =
+        dimensionSpacingFromString(*spacing_before_unpacked_dimensions_);
+  }
+  if (named_port_paren_alignment_.has_value()) {
+    style.named_port_paren_alignment =
+        parenAlignmentFromString(*named_port_paren_alignment_);
+  }
+  if (named_parameter_paren_alignment_.has_value()) {
+    style.named_parameter_paren_alignment =
+        parenAlignmentFromString(*named_parameter_paren_alignment_);
+  }
+  if (named_port_paren_padding_.has_value()) {
+    style.named_port_paren_padding =
+        parenPaddingFromString(*named_port_paren_padding_);
+  }
+  if (named_parameter_paren_padding_.has_value()) {
+    style.named_parameter_paren_padding =
+        parenPaddingFromString(*named_parameter_paren_padding_);
+  }
+  if (port_list_comma_placement_.has_value()) {
+    style.port_list_comma_placement =
+        listCommaPlacementFromString(*port_list_comma_placement_);
+  }
+  if (parameter_list_comma_placement_.has_value()) {
+    style.parameter_list_comma_placement =
+        listCommaPlacementFromString(*parameter_list_comma_placement_);
   }
 }
 
