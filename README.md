@@ -132,7 +132,7 @@ These options affect the current formatter:
 
 The formatter currently runs its line-wrap search regardless of the reserved `try_wrap_long_lines` setting. Comments and unsupported regions are preserved rather than reflowed into a new comment style.
 
-The CLI accepts **reserved style options** that are validated and stored but do not yet change output. They include per-context alignment policies such as `port_declarations_alignment` and `assignment_statement_alignment`, per-context indentation policies, `alignment_group_boundary`, and the boolean options `port_declarations_right_align_packed_dimensions`, `port_declarations_right_align_unpacked_dimensions`, `compact_indexing_and_selections`, `class_parameter_space`, `expand_coverpoints`, and `try_wrap_long_lines`. See `verihogg-format --help` for the available flags and values. Boolean style options, including `wrap_end_else_clauses`, have a `--no_<name>` form to override a true value from a config file.
+The CLI and schema also accept **reserved style options** that are validated and stored but do not yet change output. They include per-context alignment (`port_declarations_alignment`, `assignment_statement_alignment`, and the other `*_alignment` options), per-context indentation (`*_indentation`), `alignment_group_boundary`, and the boolean options `port_declarations_right_align_packed_dimensions`, `port_declarations_right_align_unpacked_dimensions`, `compact_indexing_and_selections`, `class_parameter_space`, `expand_coverpoints`, and `try_wrap_long_lines`. See `verihogg-format --help` and the [configuration schema](schemas/verihogg-format.schema.json) for the complete list and allowed values. Boolean style options, including `wrap_end_else_clauses`, have a `--no_<name>` form to override a true value from a config file.
 
 ## Configuration
 
@@ -148,9 +148,7 @@ line_terminator: lf
 
 `version: "0.1.0"` is required. All other fields are optional. The formatter searches upward from each input file's directory; for stdin it searches from the current working directory. `--config PATH` selects a file explicitly. Values are applied in this order, with later values taking precedence: built-in defaults, named style profile, YAML file, CLI overrides. Different input files can therefore use different nearby config files in the same command.
 
-The config is checked against the [JSON Schema](schemas/verihogg-format.schema.json), which is embedded in the binary. Unknown keys and invalid values produce an error with file and source position. The `style` key accepts `default`, `lowrisc`, and `scr1`, but these profiles currently have the same defaults; the latter two are not tuned presets yet.
-
-The schema lists reserved settings for module body indentation, module list opening placement, dimension spacing, named connection parentheses, and comma placement in port and parameter lists. These settings are available in YAML and as CLI flags for future formatting support.
+The config is checked against the [JSON Schema](schemas/verihogg-format.schema.json), which is embedded in the binary. Unknown keys and invalid values produce an error with file and source position. The `style` key accepts `default`, `lowrisc`, and `scr1`, but these profiles currently have the same defaults; the latter two are not tuned presets yet. Reserved style options are accepted in YAML as well as on the CLI but currently have no effect on formatting.
 
 ## How it works and current limits
 
