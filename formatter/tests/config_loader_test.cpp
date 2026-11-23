@@ -20,9 +20,15 @@ namespace fs = std::filesystem;
 
 using format::AlignmentGroupBoundary;
 using format::AlignmentPolicy;
+using format::DimensionSpacing;
 using format::FormatStyle;
 using format::IndentationPolicy;
 using format::LineTerminator;
+using format::ListCommaPlacement;
+using format::ListOpening;
+using format::ModuleBodyIndentation;
+using format::ParenAlignment;
+using format::ParenPadding;
 using format::config::ConfigResolver;
 using format::config::loadConfigFile;
 
@@ -60,6 +66,17 @@ class_parameter_space: true
 expand_coverpoints: true
 try_wrap_long_lines: true
 wrap_end_else_clauses: true
+module_body_indentation: none
+module_parameter_list_opening: next-line
+module_port_list_opening: preserve
+packed_dimension_separator: space
+spacing_before_unpacked_dimensions: preserve
+named_port_paren_alignment: both
+named_parameter_paren_alignment: opening
+named_port_paren_padding: spaced
+named_parameter_paren_padding: compact
+port_list_comma_placement: leading
+parameter_list_comma_placement: preserve
 )";
 
 class ConfigLoaderTest : public ::testing::Test {
@@ -160,6 +177,20 @@ TEST_F(ConfigLoaderTest, AllSchemaOptionsAreApplied) {
   EXPECT_TRUE(style.expand_coverpoints);
   EXPECT_TRUE(style.try_wrap_long_lines);
   EXPECT_TRUE(style.wrap_end_else_clauses);
+
+  EXPECT_EQ(style.module_body_indentation, ModuleBodyIndentation::kNone);
+  EXPECT_EQ(style.module_parameter_list_opening, ListOpening::kNextLine);
+  EXPECT_EQ(style.module_port_list_opening, ListOpening::kPreserve);
+  EXPECT_EQ(style.packed_dimension_separator, DimensionSpacing::kSpace);
+  EXPECT_EQ(style.spacing_before_unpacked_dimensions,
+            DimensionSpacing::kPreserve);
+  EXPECT_EQ(style.named_port_paren_alignment, ParenAlignment::kBoth);
+  EXPECT_EQ(style.named_parameter_paren_alignment, ParenAlignment::kOpening);
+  EXPECT_EQ(style.named_port_paren_padding, ParenPadding::kSpaced);
+  EXPECT_EQ(style.named_parameter_paren_padding, ParenPadding::kCompact);
+  EXPECT_EQ(style.port_list_comma_placement, ListCommaPlacement::kLeading);
+  EXPECT_EQ(style.parameter_list_comma_placement,
+            ListCommaPlacement::kPreserve);
 }
 
 TEST_F(ConfigLoaderTest, UnknownOptionReportsKeyAndPosition) {
@@ -287,6 +318,12 @@ TEST_F(ConfigLoaderTest, InvalidScalarValuesReportOptionAndPosition) {
            InvalidOption{"line_break_penalty", "-1"},
            InvalidOption{"compact_indexing_and_selections", "abc"},
            InvalidOption{"compact_indexing_and_selections", "1"},
+           InvalidOption{"module_body_indentation", "wrap"},
+           InvalidOption{"module_parameter_list_opening", "inside"},
+           InvalidOption{"packed_dimension_separator", "spaced"},
+           InvalidOption{"named_port_paren_alignment", "closing"},
+           InvalidOption{"named_parameter_paren_padding", "space"},
+           InvalidOption{"parameter_list_comma_placement", "start"},
        }) {
     SCOPED_TRACE(std::string(option.name) + ": " + std::string(option.value));
     const fs::path path = writeFile(

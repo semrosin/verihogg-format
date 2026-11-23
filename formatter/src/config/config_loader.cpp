@@ -8,6 +8,7 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <valijson/adapters/yaml_cpp_adapter.hpp>
 #include <valijson/schema.hpp>
@@ -173,6 +174,86 @@ auto validateDocument(const YAML::Node& doc, const fs::path& path) -> void {
   throw std::runtime_error(fmt::format("{}", fmt::join(messages, "\n")));
 }
 
+[[nodiscard]] auto moduleBodyIndentationFromString(std::string_view value)
+    -> ModuleBodyIndentation {
+  if (value == "indent") {
+    return ModuleBodyIndentation::kIndent;
+  }
+  if (value == "none") {
+    return ModuleBodyIndentation::kNone;
+  }
+  throw std::invalid_argument("Unknown module body indentation: " +
+                              std::string(value));
+}
+
+[[nodiscard]] auto listOpeningFromString(std::string_view value)
+    -> ListOpening {
+  if (value == "same-line") {
+    return ListOpening::kSameLine;
+  }
+  if (value == "next-line") {
+    return ListOpening::kNextLine;
+  }
+  if (value == "preserve") {
+    return ListOpening::kPreserve;
+  }
+  throw std::invalid_argument("Unknown list opening: " + std::string(value));
+}
+
+[[nodiscard]] auto dimensionSpacingFromString(std::string_view value)
+    -> DimensionSpacing {
+  if (value == "compact") {
+    return DimensionSpacing::kCompact;
+  }
+  if (value == "space") {
+    return DimensionSpacing::kSpace;
+  }
+  if (value == "preserve") {
+    return DimensionSpacing::kPreserve;
+  }
+  throw std::invalid_argument("Unknown dimension spacing: " +
+                              std::string(value));
+}
+
+[[nodiscard]] auto parenAlignmentFromString(std::string_view value)
+    -> ParenAlignment {
+  if (value == "opening") {
+    return ParenAlignment::kOpening;
+  }
+  if (value == "both") {
+    return ParenAlignment::kBoth;
+  }
+  throw std::invalid_argument("Unknown parenthesis alignment: " +
+                              std::string(value));
+}
+
+[[nodiscard]] auto parenPaddingFromString(std::string_view value)
+    -> ParenPadding {
+  if (value == "compact") {
+    return ParenPadding::kCompact;
+  }
+  if (value == "spaced") {
+    return ParenPadding::kSpaced;
+  }
+  throw std::invalid_argument("Unknown parenthesis padding: " +
+                              std::string(value));
+}
+
+[[nodiscard]] auto listCommaPlacementFromString(std::string_view value)
+    -> ListCommaPlacement {
+  if (value == "leading") {
+    return ListCommaPlacement::kLeading;
+  }
+  if (value == "trailing") {
+    return ListCommaPlacement::kTrailing;
+  }
+  if (value == "preserve") {
+    return ListCommaPlacement::kPreserve;
+  }
+  throw std::invalid_argument("Unknown list comma placement: " +
+                              std::string(value));
+}
+
 auto applyDocument(const YAML::Node& doc, FormatStyle& style) -> void {
   for (const auto& entry : doc) {
     const auto key = entry.first.as<std::string>();
@@ -258,6 +339,39 @@ auto applyDocument(const YAML::Node& doc, FormatStyle& style) -> void {
       style.try_wrap_long_lines = value.as<bool>();
     } else if (key == "wrap_end_else_clauses") {
       style.wrap_end_else_clauses = value.as<bool>();
+    } else if (key == "module_body_indentation") {
+      style.module_body_indentation =
+          moduleBodyIndentationFromString(value.as<std::string>());
+    } else if (key == "module_parameter_list_opening") {
+      style.module_parameter_list_opening =
+          listOpeningFromString(value.as<std::string>());
+    } else if (key == "module_port_list_opening") {
+      style.module_port_list_opening =
+          listOpeningFromString(value.as<std::string>());
+    } else if (key == "packed_dimension_separator") {
+      style.packed_dimension_separator =
+          dimensionSpacingFromString(value.as<std::string>());
+    } else if (key == "spacing_before_unpacked_dimensions") {
+      style.spacing_before_unpacked_dimensions =
+          dimensionSpacingFromString(value.as<std::string>());
+    } else if (key == "named_port_paren_alignment") {
+      style.named_port_paren_alignment =
+          parenAlignmentFromString(value.as<std::string>());
+    } else if (key == "named_parameter_paren_alignment") {
+      style.named_parameter_paren_alignment =
+          parenAlignmentFromString(value.as<std::string>());
+    } else if (key == "named_port_paren_padding") {
+      style.named_port_paren_padding =
+          parenPaddingFromString(value.as<std::string>());
+    } else if (key == "named_parameter_paren_padding") {
+      style.named_parameter_paren_padding =
+          parenPaddingFromString(value.as<std::string>());
+    } else if (key == "port_list_comma_placement") {
+      style.port_list_comma_placement =
+          listCommaPlacementFromString(value.as<std::string>());
+    } else if (key == "parameter_list_comma_placement") {
+      style.parameter_list_comma_placement =
+          listCommaPlacementFromString(value.as<std::string>());
     } else {
       // The schema rejects unknown keys, so this indicates a mapping gap
       // between the schema and this function.

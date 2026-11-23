@@ -99,6 +99,39 @@ enum class AlignmentGroupBoundary : uint8_t {
       std::string("Unknown alignment group boundary: ").append(s));
 }
 
+enum class ModuleBodyIndentation : uint8_t {
+  kIndent,
+  kNone,
+};
+
+enum class ListOpening : uint8_t {
+  kSameLine,
+  kNextLine,
+  kPreserve,
+};
+
+enum class DimensionSpacing : uint8_t {
+  kCompact,
+  kSpace,
+  kPreserve,
+};
+
+enum class ParenAlignment : uint8_t {
+  kOpening,
+  kBoth,
+};
+
+enum class ParenPadding : uint8_t {
+  kCompact,
+  kSpaced,
+};
+
+enum class ListCommaPlacement : uint8_t {
+  kLeading,
+  kTrailing,
+  kPreserve,
+};
+
 struct RunConfig {
   bool inplace = false;
   bool check = false;
@@ -169,6 +202,22 @@ struct FormatStyle {
   bool expand_coverpoints = defaults::kExpandCoverpoints;
   bool try_wrap_long_lines = defaults::kTryWrapLongLines;
   bool wrap_end_else_clauses = defaults::kWrapEndElseClauses;
+
+  // Reserved style options accepted by the YAML configuration.
+  ModuleBodyIndentation module_body_indentation =
+      ModuleBodyIndentation::kIndent;
+  ListOpening module_parameter_list_opening = ListOpening::kSameLine;
+  ListOpening module_port_list_opening = ListOpening::kSameLine;
+  DimensionSpacing packed_dimension_separator = DimensionSpacing::kCompact;
+  DimensionSpacing spacing_before_unpacked_dimensions =
+      DimensionSpacing::kCompact;
+  ParenAlignment named_port_paren_alignment = ParenAlignment::kOpening;
+  ParenAlignment named_parameter_paren_alignment = ParenAlignment::kOpening;
+  ParenPadding named_port_paren_padding = ParenPadding::kCompact;
+  ParenPadding named_parameter_paren_padding = ParenPadding::kCompact;
+  ListCommaPlacement port_list_comma_placement = ListCommaPlacement::kTrailing;
+  ListCommaPlacement parameter_list_comma_placement =
+      ListCommaPlacement::kTrailing;
 
   [[nodiscard]] static auto defaults() noexcept -> FormatStyle { return {}; }
 };

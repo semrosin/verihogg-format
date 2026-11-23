@@ -8,9 +8,15 @@ namespace {
 
 using format::AlignmentGroupBoundary;
 using format::AlignmentPolicy;
+using format::DimensionSpacing;
 using format::FormatStyle;
 using format::IndentationPolicy;
 using format::LineTerminator;
+using format::ListCommaPlacement;
+using format::ListOpening;
+using format::ModuleBodyIndentation;
+using format::ParenAlignment;
+using format::ParenPadding;
 
 TEST(FormatStyleTest, DefaultsMatchSchema) {
   const FormatStyle style = FormatStyle::defaults();
@@ -49,6 +55,20 @@ TEST(FormatStyleTest, DefaultsMatchSchema) {
   EXPECT_FALSE(style.expand_coverpoints);
   EXPECT_FALSE(style.try_wrap_long_lines);
   EXPECT_FALSE(style.wrap_end_else_clauses);
+
+  EXPECT_EQ(style.module_body_indentation, ModuleBodyIndentation::kIndent);
+  EXPECT_EQ(style.module_parameter_list_opening, ListOpening::kSameLine);
+  EXPECT_EQ(style.module_port_list_opening, ListOpening::kSameLine);
+  EXPECT_EQ(style.packed_dimension_separator, DimensionSpacing::kCompact);
+  EXPECT_EQ(style.spacing_before_unpacked_dimensions,
+            DimensionSpacing::kCompact);
+  EXPECT_EQ(style.named_port_paren_alignment, ParenAlignment::kOpening);
+  EXPECT_EQ(style.named_parameter_paren_alignment, ParenAlignment::kOpening);
+  EXPECT_EQ(style.named_port_paren_padding, ParenPadding::kCompact);
+  EXPECT_EQ(style.named_parameter_paren_padding, ParenPadding::kCompact);
+  EXPECT_EQ(style.port_list_comma_placement, ListCommaPlacement::kTrailing);
+  EXPECT_EQ(style.parameter_list_comma_placement,
+            ListCommaPlacement::kTrailing);
 }
 
 TEST(FormatStyleTest, LineTerminatorFromString) {
