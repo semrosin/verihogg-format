@@ -48,35 +48,35 @@ assignment_statement_alignment: preserve
 formal_parameters_alignment: infer
 named_parameter_alignment: align
 named_port_alignment: flush-left
+named_port_paren_alignment: both
+named_parameter_paren_alignment: opening
 parameter_declaration_alignment: preserve
 case_items_alignment: infer
 enum_assignment_statement_alignment: align
 struct_union_members_alignment: flush-left
 class_member_variable_alignment: preserve
 distribution_items_alignment: infer
+module_body_indentation: none
 port_declarations_indentation: indent
 formal_parameters_indentation: wrap
 named_parameter_indentation: indent
 named_port_indentation: wrap
+module_parameter_list_opening: next-line
+module_port_list_opening: preserve
+port_list_comma_placement: leading
+parameter_list_comma_placement: preserve
 alignment_group_boundary: blank-lines-and-separator-comments
 port_declarations_right_align_packed_dimensions: true
 port_declarations_right_align_unpacked_dimensions: true
+packed_dimension_separator: space
+spacing_before_unpacked_dimensions: preserve
+named_port_paren_padding: spaced
+named_parameter_paren_padding: compact
 compact_indexing_and_selections: false
 class_parameter_space: true
 expand_coverpoints: true
 try_wrap_long_lines: true
 wrap_end_else_clauses: true
-module_body_indentation: none
-module_parameter_list_opening: next-line
-module_port_list_opening: preserve
-packed_dimension_separator: space
-spacing_before_unpacked_dimensions: preserve
-named_port_paren_alignment: both
-named_parameter_paren_alignment: opening
-named_port_paren_padding: spaced
-named_parameter_paren_padding: compact
-port_list_comma_placement: leading
-parameter_list_comma_placement: preserve
 )";
 
 class ConfigLoaderTest : public ::testing::Test {
@@ -155,6 +155,8 @@ TEST_F(ConfigLoaderTest, AllSchemaOptionsAreApplied) {
   EXPECT_EQ(style.formal_parameters_alignment, AlignmentPolicy::kInfer);
   EXPECT_EQ(style.named_parameter_alignment, AlignmentPolicy::kAlign);
   EXPECT_EQ(style.named_port_alignment, AlignmentPolicy::kFlushLeft);
+  EXPECT_EQ(style.named_port_paren_alignment, ParenAlignment::kBoth);
+  EXPECT_EQ(style.named_parameter_paren_alignment, ParenAlignment::kOpening);
   EXPECT_EQ(style.parameter_declaration_alignment, AlignmentPolicy::kPreserve);
   EXPECT_EQ(style.case_items_alignment, AlignmentPolicy::kInfer);
   EXPECT_EQ(style.enum_assignment_statement_alignment, AlignmentPolicy::kAlign);
@@ -162,35 +164,32 @@ TEST_F(ConfigLoaderTest, AllSchemaOptionsAreApplied) {
   EXPECT_EQ(style.class_member_variable_alignment, AlignmentPolicy::kPreserve);
   EXPECT_EQ(style.distribution_items_alignment, AlignmentPolicy::kInfer);
 
+  EXPECT_EQ(style.module_body_indentation, ModuleBodyIndentation::kNone);
   EXPECT_EQ(style.port_declarations_indentation, IndentationPolicy::kIndent);
   EXPECT_EQ(style.formal_parameters_indentation, IndentationPolicy::kWrap);
   EXPECT_EQ(style.named_parameter_indentation, IndentationPolicy::kIndent);
   EXPECT_EQ(style.named_port_indentation, IndentationPolicy::kWrap);
 
+  EXPECT_EQ(style.module_parameter_list_opening, ListOpening::kNextLine);
+  EXPECT_EQ(style.module_port_list_opening, ListOpening::kPreserve);
+  EXPECT_EQ(style.port_list_comma_placement, ListCommaPlacement::kLeading);
+  EXPECT_EQ(style.parameter_list_comma_placement,
+            ListCommaPlacement::kPreserve);
   EXPECT_EQ(style.alignment_group_boundary,
             AlignmentGroupBoundary::kBlankLinesAndSeparatorComments);
 
   EXPECT_TRUE(style.port_declarations_right_align_packed_dimensions);
   EXPECT_TRUE(style.port_declarations_right_align_unpacked_dimensions);
+  EXPECT_EQ(style.packed_dimension_separator, DimensionSpacing::kSpace);
+  EXPECT_EQ(style.spacing_before_unpacked_dimensions,
+            DimensionSpacing::kPreserve);
+  EXPECT_EQ(style.named_port_paren_padding, ParenPadding::kSpaced);
+  EXPECT_EQ(style.named_parameter_paren_padding, ParenPadding::kCompact);
   EXPECT_FALSE(style.compact_indexing_and_selections);
   EXPECT_TRUE(style.class_parameter_space);
   EXPECT_TRUE(style.expand_coverpoints);
   EXPECT_TRUE(style.try_wrap_long_lines);
   EXPECT_TRUE(style.wrap_end_else_clauses);
-
-  EXPECT_EQ(style.module_body_indentation, ModuleBodyIndentation::kNone);
-  EXPECT_EQ(style.module_parameter_list_opening, ListOpening::kNextLine);
-  EXPECT_EQ(style.module_port_list_opening, ListOpening::kPreserve);
-  EXPECT_EQ(style.packed_dimension_separator, DimensionSpacing::kSpace);
-  EXPECT_EQ(style.spacing_before_unpacked_dimensions,
-            DimensionSpacing::kPreserve);
-  EXPECT_EQ(style.named_port_paren_alignment, ParenAlignment::kBoth);
-  EXPECT_EQ(style.named_parameter_paren_alignment, ParenAlignment::kOpening);
-  EXPECT_EQ(style.named_port_paren_padding, ParenPadding::kSpaced);
-  EXPECT_EQ(style.named_parameter_paren_padding, ParenPadding::kCompact);
-  EXPECT_EQ(style.port_list_comma_placement, ListCommaPlacement::kLeading);
-  EXPECT_EQ(style.parameter_list_comma_placement,
-            ListCommaPlacement::kPreserve);
 }
 
 TEST_F(ConfigLoaderTest, UnknownOptionReportsKeyAndPosition) {

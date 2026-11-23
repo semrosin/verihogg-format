@@ -255,6 +255,8 @@ struct FormatStyle {
   AlignmentPolicy formal_parameters_alignment = defaults::kAlignmentPolicy;
   AlignmentPolicy named_parameter_alignment = defaults::kAlignmentPolicy;
   AlignmentPolicy named_port_alignment = defaults::kAlignmentPolicy;
+  ParenAlignment named_port_paren_alignment = ParenAlignment::kOpening;
+  ParenAlignment named_parameter_paren_alignment = ParenAlignment::kOpening;
   AlignmentPolicy parameter_declaration_alignment = defaults::kAlignmentPolicy;
   AlignmentPolicy case_items_alignment = defaults::kAlignmentPolicy;
   AlignmentPolicy enum_assignment_statement_alignment =
@@ -263,6 +265,8 @@ struct FormatStyle {
   AlignmentPolicy class_member_variable_alignment = defaults::kAlignmentPolicy;
   AlignmentPolicy distribution_items_alignment = defaults::kAlignmentPolicy;
 
+  ModuleBodyIndentation module_body_indentation =
+      ModuleBodyIndentation::kIndent;
   IndentationPolicy port_declarations_indentation =
       defaults::kIndentationPolicy;
   IndentationPolicy formal_parameters_indentation =
@@ -270,6 +274,11 @@ struct FormatStyle {
   IndentationPolicy named_parameter_indentation = defaults::kIndentationPolicy;
   IndentationPolicy named_port_indentation = defaults::kIndentationPolicy;
 
+  ListOpening module_parameter_list_opening = ListOpening::kSameLine;
+  ListOpening module_port_list_opening = ListOpening::kSameLine;
+  ListCommaPlacement port_list_comma_placement = ListCommaPlacement::kTrailing;
+  ListCommaPlacement parameter_list_comma_placement =
+      ListCommaPlacement::kTrailing;
   AlignmentGroupBoundary alignment_group_boundary =
       defaults::kAlignmentGroupBoundary;
 
@@ -277,28 +286,17 @@ struct FormatStyle {
       defaults::kPortDeclarationsRightAlignPackedDimensions;
   bool port_declarations_right_align_unpacked_dimensions =
       defaults::kPortDeclarationsRightAlignUnpackedDimensions;
+  DimensionSpacing packed_dimension_separator = DimensionSpacing::kCompact;
+  DimensionSpacing spacing_before_unpacked_dimensions =
+      DimensionSpacing::kCompact;
+  ParenPadding named_port_paren_padding = ParenPadding::kCompact;
+  ParenPadding named_parameter_paren_padding = ParenPadding::kCompact;
   bool compact_indexing_and_selections =
       defaults::kCompactIndexingAndSelections;
   bool class_parameter_space = defaults::kClassParameterSpace;
   bool expand_coverpoints = defaults::kExpandCoverpoints;
   bool try_wrap_long_lines = defaults::kTryWrapLongLines;
   bool wrap_end_else_clauses = defaults::kWrapEndElseClauses;
-
-  // Reserved layout options accepted in YAML and on the command line.
-  ModuleBodyIndentation module_body_indentation =
-      ModuleBodyIndentation::kIndent;
-  ListOpening module_parameter_list_opening = ListOpening::kSameLine;
-  ListOpening module_port_list_opening = ListOpening::kSameLine;
-  DimensionSpacing packed_dimension_separator = DimensionSpacing::kCompact;
-  DimensionSpacing spacing_before_unpacked_dimensions =
-      DimensionSpacing::kCompact;
-  ParenAlignment named_port_paren_alignment = ParenAlignment::kOpening;
-  ParenAlignment named_parameter_paren_alignment = ParenAlignment::kOpening;
-  ParenPadding named_port_paren_padding = ParenPadding::kCompact;
-  ParenPadding named_parameter_paren_padding = ParenPadding::kCompact;
-  ListCommaPlacement port_list_comma_placement = ListCommaPlacement::kTrailing;
-  ListCommaPlacement parameter_list_comma_placement =
-      ListCommaPlacement::kTrailing;
 
   [[nodiscard]] static auto defaults() noexcept -> FormatStyle { return {}; }
 };

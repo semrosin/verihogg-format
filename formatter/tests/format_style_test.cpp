@@ -34,6 +34,8 @@ TEST(FormatStyleTest, DefaultsMatchSchema) {
   EXPECT_EQ(style.formal_parameters_alignment, AlignmentPolicy::kInfer);
   EXPECT_EQ(style.named_parameter_alignment, AlignmentPolicy::kInfer);
   EXPECT_EQ(style.named_port_alignment, AlignmentPolicy::kInfer);
+  EXPECT_EQ(style.named_port_paren_alignment, ParenAlignment::kOpening);
+  EXPECT_EQ(style.named_parameter_paren_alignment, ParenAlignment::kOpening);
   EXPECT_EQ(style.parameter_declaration_alignment, AlignmentPolicy::kInfer);
   EXPECT_EQ(style.case_items_alignment, AlignmentPolicy::kInfer);
   EXPECT_EQ(style.enum_assignment_statement_alignment, AlignmentPolicy::kInfer);
@@ -41,34 +43,31 @@ TEST(FormatStyleTest, DefaultsMatchSchema) {
   EXPECT_EQ(style.class_member_variable_alignment, AlignmentPolicy::kInfer);
   EXPECT_EQ(style.distribution_items_alignment, AlignmentPolicy::kInfer);
 
+  EXPECT_EQ(style.module_body_indentation, ModuleBodyIndentation::kIndent);
   EXPECT_EQ(style.port_declarations_indentation, IndentationPolicy::kWrap);
   EXPECT_EQ(style.formal_parameters_indentation, IndentationPolicy::kWrap);
   EXPECT_EQ(style.named_parameter_indentation, IndentationPolicy::kWrap);
   EXPECT_EQ(style.named_port_indentation, IndentationPolicy::kWrap);
 
+  EXPECT_EQ(style.module_parameter_list_opening, ListOpening::kSameLine);
+  EXPECT_EQ(style.module_port_list_opening, ListOpening::kSameLine);
+  EXPECT_EQ(style.port_list_comma_placement, ListCommaPlacement::kTrailing);
+  EXPECT_EQ(style.parameter_list_comma_placement,
+            ListCommaPlacement::kTrailing);
   EXPECT_EQ(style.alignment_group_boundary, AlignmentGroupBoundary::kNone);
 
   EXPECT_FALSE(style.port_declarations_right_align_packed_dimensions);
   EXPECT_FALSE(style.port_declarations_right_align_unpacked_dimensions);
+  EXPECT_EQ(style.packed_dimension_separator, DimensionSpacing::kCompact);
+  EXPECT_EQ(style.spacing_before_unpacked_dimensions,
+            DimensionSpacing::kCompact);
+  EXPECT_EQ(style.named_port_paren_padding, ParenPadding::kCompact);
+  EXPECT_EQ(style.named_parameter_paren_padding, ParenPadding::kCompact);
   EXPECT_TRUE(style.compact_indexing_and_selections);
   EXPECT_FALSE(style.class_parameter_space);
   EXPECT_FALSE(style.expand_coverpoints);
   EXPECT_FALSE(style.try_wrap_long_lines);
   EXPECT_FALSE(style.wrap_end_else_clauses);
-
-  EXPECT_EQ(style.module_body_indentation, ModuleBodyIndentation::kIndent);
-  EXPECT_EQ(style.module_parameter_list_opening, ListOpening::kSameLine);
-  EXPECT_EQ(style.module_port_list_opening, ListOpening::kSameLine);
-  EXPECT_EQ(style.packed_dimension_separator, DimensionSpacing::kCompact);
-  EXPECT_EQ(style.spacing_before_unpacked_dimensions,
-            DimensionSpacing::kCompact);
-  EXPECT_EQ(style.named_port_paren_alignment, ParenAlignment::kOpening);
-  EXPECT_EQ(style.named_parameter_paren_alignment, ParenAlignment::kOpening);
-  EXPECT_EQ(style.named_port_paren_padding, ParenPadding::kCompact);
-  EXPECT_EQ(style.named_parameter_paren_padding, ParenPadding::kCompact);
-  EXPECT_EQ(style.port_list_comma_placement, ListCommaPlacement::kTrailing);
-  EXPECT_EQ(style.parameter_list_comma_placement,
-            ListCommaPlacement::kTrailing);
 }
 
 TEST(FormatStyleTest, LineTerminatorFromString) {
