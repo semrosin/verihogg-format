@@ -27,12 +27,21 @@ jobs:
           - name: cheriot-ibex-dv
             repository: lowRISC/cheriot-ibex-dv
             ref: main
+          - name: cheriot-ibex-rtl
+            repository: microsoft/cheriot-ibex
+            ref: 14e275b4d36486c9979a76248791c410145ea50b
           - name: core-v-verif
             repository: openhwfoundation/core-v-verif
             ref: master
           - name: cva6
             repository: openhwfoundation/cva6
             ref: main
+          - name: cva6-cvfpu
+            repository: openhwfoundation/cvfpu
+            ref: 3eb6afeab2cb33f7d8689222955d0171aeb3a801
+          - name: cva6-hpdcache
+            repository: openhwfoundation/cv-hpdcache
+            ref: 40d2897eda70644df2eb857efd9fa573eaacafab
           - name: ibex
             repository: lowRISC/ibex
             ref: master
@@ -120,7 +129,8 @@ jobs:
           find out -maxdepth 3 -type f -print
           test -s out/index.html
           for project in \
-            black-parrot cheriot-ibex-dv core-v-verif cva6 \
+            black-parrot cheriot-ibex-dv cheriot-ibex-rtl \
+            core-v-verif cva6 cva6-cvfpu cva6-hpdcache \
             ibex opentitan scr1 uvm-core; do
             test -s "out/projects/unsupported-${project}.html"
           done
