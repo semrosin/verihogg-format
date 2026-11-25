@@ -3,10 +3,30 @@
 
 import argparse
 import html
+from collections import defaultdict
 from itertools import groupby
 from pathlib import Path
 
-from history import commit_distance, read_history, read_json, record
+from history import commit_distance, load_history, read_history, read_json, record
+
+
+def timeline(history):
+    by_sha = defaultdict(list)
+    for run in history["runs"]:
+        by_sha[run["sha"]].append(run)
+
+    entries = []
+    for commit in history.get("backfill", []):
+        measured = by_sha.pop(commit["sha"], [])
+        if not measured:
+            entries.append(commit)
+            continue
+        entries.extend(measured[:-1])
+        entries.append({**commit, **measured[-1]})
+    for run in history["runs"]:
+        if run["sha"] in by_sha:
+            entries.append(run)
+    return entries
 
 
 def commit_link(run, repository):
@@ -16,7 +36,8 @@ def commit_link(run, repository):
 
 
 def render_history(archive, repository, current):
-    runs = read_history(archive)
+    history = load_history(archive)
+    runs = timeline(history)
     if not runs:
         return "<p>History will appear after the first recorded run on main.</p>"
 
@@ -32,6 +53,10 @@ def render_history(archive, repository, current):
         return f'{commit_link(run, repository)} <time datetime="{date}">{date}</time>'
 
     def group_kind(run):
+        if run.get("before_diagnostics"):
+            return "early"
+        if "baseline" not in run:
+            return "missing"
         if not (run["baseline"] or run["added"] or run["lost"]
                 or run.get("diagnostics_removed") or run.get("diagnostics_added")):
             return "unchanged"
@@ -43,7 +68,11 @@ def render_history(archive, repository, current):
             items = list(group)
             count = len(items)
             noun = "commit" if count == 1 else "commits"
-            label = f"{count} tested {noun} with no confirmed support changes"
+            label = {
+                "early": f"Before unsupported-construct diagnostics ({count} {noun})",
+                "missing": f"No measured results ({count} {noun})",
+                "unchanged": f"{count} tested {noun} with no confirmed support changes",
+            }[kind]
             lines = []
             for index, run in items:
                 summary = render_commit(run)

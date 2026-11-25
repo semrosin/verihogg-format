@@ -103,6 +103,35 @@ def record(archive, current, distance):
     return True
 
 
+def backfill(archive, commits, snapshots):
+    if archive.exists() and any(archive.iterdir()):
+        raise ValueError(f"Backfill output must be empty: {archive}")
+
+    history = {"version": 1, "runs": [], "backfill": []}
+    previous = None
+    previous_index = None
+    for index, commit in enumerate(commits):
+        entry = dict(commit)
+        history["backfill"].append(entry)
+        sha = commit["sha"]
+        current = snapshots.get(sha)
+        if current is not None and not commit.get("before_diagnostics"):
+            distance = index - previous_index if previous is not None else None
+            history["runs"].append(run_entry(current, previous, distance))
+            write_json(snapshot_path(archive, current), current)
+            previous, previous_index = current, index
+        if "merged" in commit:
+            entry["merged"] = []
+            for merged in commit["merged"]:
+                side = snapshots.get(merged["sha"])
+                if side is not None:
+                    parent = snapshots.get(merged["parent"])
+                    merged = {**merged, "run": run_entry(side, parent, 1)}
+                    write_json(snapshot_path(archive, side), side)
+                entry["merged"].append(merged)
+    write_json(archive / "history.json", history)
+
+
 def commit_distance(formatter, base, sha):
     if base == sha:
         return 0
