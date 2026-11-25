@@ -36,7 +36,7 @@ jobs:
         uses: actions/checkout@v6
         with:
           repository: verihogg/sv-tests-results
-          ref: 42feddf5c4055675d51b2fdf4cffc495f1660e4e
+          ref: refs/heads/feat/constructs-report-design
           path: report-generators
           sparse-checkout: |
             /tools/sv_tests_unsupported_report.py
