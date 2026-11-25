@@ -27,15 +27,15 @@ jobs:
         uses: actions/checkout@v6
         with:
           repository: verihogg/sv-tests
-          # Includes the formatter report landing page; update deliberately.
-          ref: 184d433dc32ea4af8df652d442f471a8a9716df2
+          # Replace with the merged runner-fix commit from develop before merge.
+          ref: eabb1204f2a3a23f51d0400a472e5d568a30b468
           path: sv-tests
 
       - name: Checkout report generators only
         uses: actions/checkout@v6
         with:
           repository: verihogg/sv-tests-results
-          ref: 42feddf5c4055675d51b2fdf4cffc495f1660e4e
+          ref: refs/heads/feat/constructs-report-design
           path: report-generators
           sparse-checkout: |
             /tools/sv_tests_unsupported_report.py

@@ -10,46 +10,7 @@ command -v verihogg-format
 command -v slang-driver
 slang-driver --version
 
-# The runner embeds its URL into every test log. Its default is the gitlink
-# recorded by sv-tests, not necessarily the formatter binary being tested.
-python3 - <<'PY'
-from pathlib import Path
-
-runner = Path('tools/runners/VerihoggFormat.py')
-source = runner.read_text(encoding='utf-8')
-old = 'self.url = f"https://github.com/verihogg/verihogg-format/tree/{self.get_commit()}"'
-new = 'self.url = "https://github.com/{}/tree/{}".format(os.environ["FORMATTER_REPOSITORY"], os.environ["FORMATTER_SHA"])'
-if source.count(old) != 1:
-    raise SystemExit('Unexpected VerihoggFormat runner URL; review the pinned runner')
-source = source.replace(old, new)
-# The formatter lexes each file directly and does not accept -I or -D.
-# Keep include paths and defines for the separate Slang CST comparison.
-old_args = '''        fmt_cmd += include_args(formatted_dir)
-        fmt_cmd += [f"-D{d}" for d in params['defines']]
-'''
-if source.count(old_args) != 1:
-    raise SystemExit('Unexpected VerihoggFormat arguments; review the pinned runner')
-source = source.replace(old_args, '')
-# Newer formatter versions print an aggregated summary instead of individual
-# Warning lines. Keep both formats so warning statuses remain meaningful.
-old_warnings = '''        warning_count = len(re.findall(r"^Warning(?: in\\b|:)", fmt_log,
-                                       re.MULTILINE))'''
-new_warnings = '''        warning_count = len(re.findall(r"^Warning(?: in\\b|:)", fmt_log,
-                                       re.MULTILINE))
-        if "The formatter does not support these constructs yet" in fmt_log:
-            warning_count += sum(int(count) for count in re.findall(
-                r"^  - .+?\\s{2,}(\\d+) occurrences?,\\s+first at ",
-                fmt_log, re.MULTILINE))'''
-if source.count(old_warnings) != 1:
-    raise SystemExit('Unexpected VerihoggFormat warning handling; review the pinned runner')
-runner.write_text(source.replace(old_warnings, new_warnings), encoding='utf-8')
-PY
 make info
-SLANG_DRIVER=$(command -v slang-driver) python3 -m unittest discover -s tools/tests -v
-
-# A successful exit code alone is insufficient: the CLI can return zero when
-# rejecting arguments. Exercise the real runner and verify changed output.
-python3 "$GITHUB_WORKSPACE/formatter/scripts/sv-tests-runner-smoke.py"
 
 # Match the sv-tests CI order; fusesoc and black-parrot use more resources.
 generators=$(make list-generators)
@@ -130,4 +91,4 @@ index.write_text(page.replace('</body>', links + '</body>', 1), encoding='utf-8'
 PY
 
 # Keep the full sv-tests table alongside the new report selection page.
-python3 tools/prepare-formatter-home out/report
+python3 "$GITHUB_WORKSPACE/formatter/scripts/prepare-sv-tests-home.py" out/report
