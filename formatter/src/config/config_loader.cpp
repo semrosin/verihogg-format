@@ -262,6 +262,8 @@ auto applyDocument(const YAML::Node& doc, FormatStyle& style) -> void {
     } else if (key == "parameter_list_comma_placement") {
       style.parameter_list_comma_placement =
           listCommaPlacementFromString(value.as<std::string>());
+    } else if (key == "break_after_parameter_override") {
+      style.break_after_parameter_override = value.as<bool>();
     } else if (key == "alignment_group_boundary") {
       style.alignment_group_boundary =
           alignmentGroupBoundaryFromString(value.as<std::string>());

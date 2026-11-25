@@ -407,6 +407,7 @@ TEST_F(FormatArgsTest, InvalidAlignmentGroupBoundaryRejectedByParser) {
 
 TEST_F(FormatArgsTest, BooleanOptionsEnable) {
   auto [style, run] = buildStyle({
+      "--break_after_parameter_override",
       "--port_declarations_right_align_packed_dimensions",
       "--port_declarations_right_align_unpacked_dimensions",
       "--compact_indexing_and_selections",
@@ -416,6 +417,7 @@ TEST_F(FormatArgsTest, BooleanOptionsEnable) {
       "--wrap_end_else_clauses",
   });
 
+  EXPECT_TRUE(style.break_after_parameter_override);
   EXPECT_TRUE(style.port_declarations_right_align_packed_dimensions);
   EXPECT_TRUE(style.port_declarations_right_align_unpacked_dimensions);
   EXPECT_TRUE(style.compact_indexing_and_selections);
@@ -427,11 +429,13 @@ TEST_F(FormatArgsTest, BooleanOptionsEnable) {
 
 TEST_F(FormatArgsTest, BooleanOptionsNegated) {
   format::FormatStyle base = format::FormatStyle::defaults();
+  base.break_after_parameter_override = true;
   base.compact_indexing_and_selections = true;
   base.expand_coverpoints = true;
 
   auto [style, run] = buildStyle(
       {
+          "--no_break_after_parameter_override",
           "--no_port_declarations_right_align_packed_dimensions",
           "--no_port_declarations_right_align_unpacked_dimensions",
           "--no_compact_indexing_and_selections",
@@ -442,6 +446,7 @@ TEST_F(FormatArgsTest, BooleanOptionsNegated) {
       },
       base);
 
+  EXPECT_FALSE(style.break_after_parameter_override);
   EXPECT_FALSE(style.port_declarations_right_align_packed_dimensions);
   EXPECT_FALSE(style.port_declarations_right_align_unpacked_dimensions);
   EXPECT_FALSE(style.compact_indexing_and_selections);

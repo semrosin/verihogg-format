@@ -124,6 +124,10 @@ List layout options:
       --port_list_comma_placement
       --parameter_list_comma_placement
 
+  Break after the closing ) of an instance parameter override list (default: off):
+      --break_after_parameter_override
+      --no_break_after_parameter_override
+
 Spacing options:
   Dimension spacing (compact | space | preserve, default: compact):
       --packed_dimension_separator
@@ -300,6 +304,10 @@ FormatArgsBinder::FormatArgsBinder() {
               .description = "Placement of an existing comma relative to a "
                              "line break in a parameter list",
               .values = kListCommaPlacementValues});
+  add_negatable_flag(app_, "--break_after_parameter_override",
+                     break_after_parameter_override_,
+                     "Break after the closing ) of an instance parameter "
+                     "override list");
   add_choice(app_, alignment_group_boundary_,
              {.name = "--alignment_group_boundary",
               .description = "Rule determining where an alignment group ends",
@@ -463,6 +471,9 @@ void FormatArgsBinder::applyStyleOverrides(FormatStyle& style) const {
   if (parameter_list_comma_placement_.has_value()) {
     style.parameter_list_comma_placement =
         listCommaPlacementFromString(*parameter_list_comma_placement_);
+  }
+  if (break_after_parameter_override_.has_value()) {
+    style.break_after_parameter_override = *break_after_parameter_override_;
   }
   if (alignment_group_boundary_.has_value()) {
     style.alignment_group_boundary =

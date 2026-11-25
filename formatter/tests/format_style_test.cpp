@@ -68,6 +68,7 @@ TEST(FormatStyleTest, DefaultsMatchSchema) {
   EXPECT_FALSE(style.expand_coverpoints);
   EXPECT_FALSE(style.try_wrap_long_lines);
   EXPECT_FALSE(style.wrap_end_else_clauses);
+  EXPECT_FALSE(style.break_after_parameter_override);
 }
 
 TEST(FormatStyleTest, LineTerminatorFromString) {

@@ -65,6 +65,7 @@ module_parameter_list_opening: next-line
 module_port_list_opening: preserve
 port_list_comma_placement: leading
 parameter_list_comma_placement: preserve
+break_after_parameter_override: true
 alignment_group_boundary: blank-lines-and-separator-comments
 port_declarations_right_align_packed_dimensions: true
 port_declarations_right_align_unpacked_dimensions: true
@@ -175,6 +176,7 @@ TEST_F(ConfigLoaderTest, AllSchemaOptionsAreApplied) {
   EXPECT_EQ(style.port_list_comma_placement, ListCommaPlacement::kLeading);
   EXPECT_EQ(style.parameter_list_comma_placement,
             ListCommaPlacement::kPreserve);
+  EXPECT_TRUE(style.break_after_parameter_override);
   EXPECT_EQ(style.alignment_group_boundary,
             AlignmentGroupBoundary::kBlankLinesAndSeparatorComments);
 

@@ -311,6 +311,12 @@
       "default": "trailing"
     },
 
+    "break_after_parameter_override": {
+      "type": "boolean",
+      "description": "Start the instance name on a new line after the closing parenthesis of the parameter override list. Not implemented yet: accepted and stored, but has no effect on formatting.",
+      "default": false
+    },
+
     "alignment_group_boundary": {
       "allOf": [
         {

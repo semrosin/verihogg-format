@@ -80,6 +80,7 @@ class FormatArgsBinder {
   std::optional<std::string> module_port_list_opening_;
   std::optional<std::string> port_list_comma_placement_;
   std::optional<std::string> parameter_list_comma_placement_;
+  std::optional<bool> break_after_parameter_override_;
   std::optional<std::string> alignment_group_boundary_;
 
   std::optional<bool> port_declarations_right_align_packed_dimensions_;

@@ -239,6 +239,7 @@ inline constexpr bool kClassParameterSpace = false;
 inline constexpr bool kExpandCoverpoints = false;
 inline constexpr bool kTryWrapLongLines = false;
 inline constexpr bool kWrapEndElseClauses = false;
+inline constexpr bool kBreakAfterParameterOverride = false;
 }  // namespace defaults
 
 struct FormatStyle {
@@ -279,6 +280,7 @@ struct FormatStyle {
   ListCommaPlacement port_list_comma_placement = ListCommaPlacement::kTrailing;
   ListCommaPlacement parameter_list_comma_placement =
       ListCommaPlacement::kTrailing;
+  bool break_after_parameter_override = defaults::kBreakAfterParameterOverride;
   AlignmentGroupBoundary alignment_group_boundary =
       defaults::kAlignmentGroupBoundary;
 
