@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Unsupported constructs · verihogg reports</title>
+  <link rel="stylesheet" href="sv-tests-reports.css">
+  <style>
+    header { display: flex; align-items: center; gap: clamp(10px, 2vw, 22px); }
+    .back {
+      display: grid; place-items: center; width: 44px; height: 44px; flex: none;
+      border-radius: 6px; color: #64708a;
+    }
+    .back::before {
+      content: ""; width: 12px; height: 12px; margin-left: 5px;
+      border: solid currentColor; border-width: 0 0 2px 2px; transform: rotate(45deg);
+    }
+    .back:hover { color: var(--blue); background: #eeedf4; }
+    main { padding: 44px 0 64px; }
+    a { color: var(--blue); text-underline-offset: .18em; }
+    a:focus-visible, summary:focus-visible { outline: 2px solid var(--blue); outline-offset: 4px; }
+    h1 { margin: 0 0 12px; font-size: clamp(32px, 6vw, 62px); line-height: 1.02; letter-spacing: -.05em; }
+    .current { margin: 0 0 38px; }
+    .timeline { list-style: none; margin: 0 clamp(8px, 1.6vw, 24px); padding: 0; }
+    .timeline > li { --marker-y: 10px; position: relative; margin-left: 6px; padding: 0 0 28px 24px; }
+    .timeline > li::before {
+      content: ""; position: absolute; inset: 0 auto 0 0; border-left: 1px solid #939bb1;
+    }
+    .timeline > li:first-child::before { top: var(--marker-y); }
+    .timeline > li:last-child::before { bottom: auto; height: var(--marker-y); }
+    .timeline > li:only-child::before { display: none; }
+    .timeline > li::after {
+      content: ""; position: absolute; box-sizing: border-box; top: calc(var(--marker-y) - 5px);
+      left: -5px; width: 11px; height: 11px;
+      border: 2px solid var(--blue); border-radius: 50%; background: var(--paper);
+    }
+    .timeline > .no-changes { --marker-y: 30px; padding-block: 20px 46px; }
+    .timeline > .no-changes::before { border-left-style: dashed; }
+    .timeline > .no-changes::after { border-color: #687590; }
+    h2 { margin: 0; font-size: 17px; line-height: 1.4; overflow-wrap: anywhere; }
+    h2 a, .no-changes li > a:first-child { color: var(--ink); text-decoration: none; }
+    h2 a:hover, h2 a:focus-visible, .no-changes li > a:first-child:hover { text-decoration: underline; }
+    code, time { font: 13px var(--mono); color: #4a5772; white-space: nowrap; }
+    time { display: inline-block; margin-left: .4em; }
+    .timeline p, details { margin: 6px 0 0; font-size: 15px; line-height: 1.45; }
+    .diagnostic-change { margin: 10px 0 0 20px; font-size: 13px; }
+    .diagnostic-change + .diagnostic-change { margin-top: 4px; }
+    .no-changes details { margin: 0; }
+    summary { width: fit-content; cursor: pointer; color: #4a5772; }
+    summary:hover { color: var(--blue); }
+    details ul { margin: 7px 0 0; padding-left: 22px; overflow-wrap: anywhere; }
+    .no-changes details > ul { margin-top: 14px; }
+    details li + li { margin-top: 5px; }
+    @media (max-width: 760px) {
+      main { padding-top: 30px; }
+      .current { margin-bottom: 30px; }
+      .timeline > li { padding-left: 18px; }
+      time { display: block; margin: 2px 0 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <a class="back" href="index.html" aria-label="All reports"></a>
+      <p class="brand">verihogg <span>/ reports</span></p>
+    </header>
+    <main>
+      <h1>Unsupported constructs</h1>
+      <p class="current"><a href="unsupported.html">Current unsupported constructs</a></p>
+      <!-- SUPPORT_HISTORY -->
+    </main>
+  </div>
+</body>
+</html>
