@@ -1,0 +1,114 @@
+name: unsupported-report-ci-test
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - ci/unsupported-report-test
+
+permissions:
+  contents: read
+
+concurrency:
+  group: unsupported-report-ci-test-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  report:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        project:
+          - name: scr1
+            repository: syntacore/scr1
+            ref: master
+          - name: ibex
+            repository: lowRISC/ibex
+            ref: master
+
+    steps:
+      - name: Checkout formatter
+        uses: actions/checkout@v6
+        with:
+          path: formatter
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+
+      - name: Build formatter
+        working-directory: formatter
+        run: nix build .#verihogg-format
+
+      - name: Checkout ${{ matrix.project.name }}
+        uses: actions/checkout@v6
+        with:
+          repository: ${{ matrix.project.repository }}
+          ref: ${{ matrix.project.ref }}
+          path: src/${{ matrix.project.name }}
+
+      - name: Generate ${{ matrix.project.name }} report
+        run: |
+          python3 formatter/tools/unsupported-report/unsupported_report.py \
+            "src/${{ matrix.project.name }}" \
+            --formatter "formatter/result/bin/verihogg-format" \
+            --jobs 4 \
+            -o "out/projects/unsupported-${{ matrix.project.name }}.html"
+
+      - name: Upload project report
+        uses: actions/upload-artifact@v4
+        with:
+          name: unsupported-project-${{ matrix.project.name }}
+          path: out/projects/unsupported-${{ matrix.project.name }}.html
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload partial output on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unsupported-project-failure-${{ matrix.project.name }}
+          path: out/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  index:
+    needs: report
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout formatter
+        uses: actions/checkout@v6
+        with:
+          path: formatter
+
+      - name: Download project reports
+        uses: actions/download-artifact@v4
+        with:
+          pattern: unsupported-project-*
+          path: out/projects
+          merge-multiple: true
+
+      - name: Build index
+        run: |
+          python3 formatter/tools/unsupported-report/build_index.py \
+            --projects-dir out/projects \
+            -o out/index.html
+
+      - name: Verify output
+        run: |
+          find out -maxdepth 3 -type f -print
+          test -s out/index.html
+          test -s out/projects/unsupported-scr1.html
+          test -s out/projects/unsupported-ibex.html
+          ! grep -R '/home/darya/verilog\|/nix/store' out
+
+      - name: Upload combined report
+        uses: actions/upload-artifact@v4
+        with:
+          name: unsupported-report-test
+          path: out/
+          if-no-files-found: error
+          retention-days: 7
