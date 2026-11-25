@@ -18,7 +18,7 @@ def main():
             parser.error(f'Missing report file: {path}')
     if table.exists():
         parser.error(f'Refusing to overwrite existing file: {table}')
-    template = Path(__file__).resolve().parent / 'sv-tests-home.html'
+    template = Path(__file__).resolve().parent / 'templates' / 'home.html'
     if not template.is_file():
         parser.error(f'Missing landing page template: {template}')
     index.rename(table)

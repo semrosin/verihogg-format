@@ -76,7 +76,7 @@ jobs:
         env:
           FORMATTER_SHA: ${{ github.sha }}
           FORMATTER_REPOSITORY: ${{ github.repository }}
-        run: bash "$GITHUB_WORKSPACE/formatter/scripts/sv-tests-report.sh" "$GITHUB_WORKSPACE/report-generators/tools"
+        run: bash "$GITHUB_WORKSPACE/formatter/scripts/sv-tests/report.sh" "$GITHUB_WORKSPACE/report-generators/tools"
 
       - name: Upload incomplete report for debugging
         if: failure()

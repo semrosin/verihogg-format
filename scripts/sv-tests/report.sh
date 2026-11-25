@@ -129,4 +129,4 @@ index.write_text(page.replace('</body>', links + '</body>', 1), encoding='utf-8'
 PY
 
 # Keep the full sv-tests table alongside the new report selection page.
-python3 "$GITHUB_WORKSPACE/formatter/scripts/prepare-sv-tests-home.py" out/report
+python3 "$GITHUB_WORKSPACE/formatter/scripts/sv-tests/prepare-home.py" out/report
