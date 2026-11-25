@@ -22,6 +22,10 @@ jobs:
         uses: actions/checkout@v6
         with:
           path: formatter
+          fetch-depth: 0
+
+      - name: Test history generation
+        run: PYTHONPATH=formatter/scripts/sv-tests python3 -m unittest discover -s formatter/scripts/sv-tests/tests
 
       - name: Checkout sv-tests
         uses: actions/checkout@v6
@@ -80,6 +84,22 @@ jobs:
           FORMATTER_SHA: ${{ github.sha }}
           FORMATTER_REPOSITORY: ${{ github.repository }}
         run: bash "$GITHUB_WORKSPACE/formatter/scripts/sv-tests/report.sh" "$GITHUB_WORKSPACE/report-generators/tools"
+
+      - name: Update formatter support history
+        env:
+          HISTORY_REMOTE: https://github.com/verihogg/sv-tests-results.git
+          # Fine-grained token with Contents write on sv-tests-results.
+          GH_TOKEN: ${{ github.repository == 'verihogg/verihogg-format' && github.ref == 'refs/heads/main' && secrets.REPORT_HISTORY_TOKEN || '' }}
+        run: |
+          options=()
+          if [[ -n "$GH_TOKEN" ]]; then
+            gh auth setup-git --hostname github.com
+            options+=(--publish)
+          elif [[ "$GITHUB_REPOSITORY:$GITHUB_REF" == 'verihogg/verihogg-format:refs/heads/main' ]]; then
+            echo "::warning::REPORT_HISTORY_TOKEN is missing. Publishing the existing support history without a new snapshot."
+          fi
+          bash formatter/scripts/sv-tests/publish-history.sh formatter sv-tests/out/report \
+            "$RUNNER_TEMP/formatter-history-snapshot.json" "${options[@]}"
 
       - name: Upload incomplete report for debugging
         if: failure()

@@ -5,6 +5,8 @@ set -euo pipefail
 generators_dir=${1:?Pass the directory containing the two report generators}
 : "${FORMATTER_SHA:?Set FORMATTER_SHA to the tested formatter commit}"
 : "${FORMATTER_REPOSITORY:?Set FORMATTER_REPOSITORY to owner/repository}"
+formatter_dir="$GITHUB_WORKSPACE/formatter"
+snapshot="${RUNNER_TEMP:-out}/formatter-history-snapshot.json"
 
 command -v verihogg-format
 command -v slang-driver
@@ -76,21 +78,36 @@ test -n "$(find out/report/results/verihoggformat -name '*.config.js' -print -qu
 test -d out/report/logs
 test -d out/report/tests
 python3 "$generators_dir/sv_tests_unsupported_report.py" --report out/report
-PYTHONPATH="$generators_dir" python3 - "$generators_dir" <<'PY'
+PYTHONPATH="$generators_dir:$formatter_dir/scripts/sv-tests" python3 - "$generators_dir" "$formatter_dir" "$snapshot" <<'PY'
+import hashlib
+import os
 from pathlib import Path
 import subprocess
 import sys
 from sv_tests_unsupported_report import load_tests
 from sv_tests_warning_constructs import render_page
+from history import make_snapshot, write_json
 
 root = Path('out/report').resolve()
 tests = load_tests(root)
 if not tests:
     raise SystemExit('No VerihoggFormat tests in report')
+generators, formatter, snapshot_path = map(Path, sys.argv[1:])
+sha = os.environ['FORMATTER_SHA']
+subject, date = subprocess.check_output(
+    ['git', '-C', formatter, 'show', '-s', '--format=%s%n%cI', sha], text=True
+).splitlines()
+config = {
+    'sv_tests': subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(),
+    'slang': subprocess.check_output(['slang-driver', '--version'], text=True).strip(),
+    'diagnostics': hashlib.sha256((generators / 'sv_tests_unsupported_report.py').read_bytes()).hexdigest(),
+}
+write_json(snapshot_path, make_snapshot(tests, sha, subject, date, config))
+
 output = root / 'constructs.html'
 if any(test.status == 'warning' for test in tests):
-    subprocess.run([sys.executable, str(Path(sys.argv[1]) /
-                   'sv_tests_warning_constructs.py'), '--report', str(root)],
+    subprocess.run([sys.executable, str(generators / 'sv_tests_warning_constructs.py'),
+                    '--report', str(root)],
                    check=True)
 else:
     output.write_text(render_page({}, root, output), encoding='utf-8')
@@ -129,4 +146,5 @@ index.write_text(page.replace('</body>', links + '</body>', 1), encoding='utf-8'
 PY
 
 # Keep the full sv-tests table alongside the new report selection page.
-python3 "$GITHUB_WORKSPACE/formatter/scripts/sv-tests/prepare-home.py" out/report
+python3 "$formatter_dir/scripts/sv-tests/prepare-home.py" out/report
+HISTORY_REMOTE= bash "$formatter_dir/scripts/sv-tests/publish-history.sh" "$formatter_dir" out/report "$snapshot"
