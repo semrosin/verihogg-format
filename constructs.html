@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VerihoggFormat — warning constructs</title>
+<style>
+:root {
+  --bg: #0f172a;
+  --panel: #111c34;
+  --panel-2: #162240;
+  --text: #e6edf7;
+  --muted: #8ca0bf;
+  --line: #24345a;
+  --green: #3fb950;
+  --yellow: #d29922;
+  --red: #f85149;
+  --gray: #6e7681;
+  --blue: #58a6ff;
+  --accent: #7c9cff;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+header {
+  padding: 28px 32px 20px;
+  border-bottom: 1px solid var(--line);
+  background: linear-gradient(180deg, #131f3b, #0f172a);
+}
+header h1 { margin: 0 0 6px; font-size: 26px; }
+header .meta { margin: 0; color: var(--muted); }
+main { padding: 24px 32px 48px; max-width: 1500px; margin: 0 auto; }
+section { margin: 0 0 34px; }
+h2 { font-size: 18px; margin: 0 0 10px; }
+.lead, .hint { color: var(--muted); margin: 0 0 12px; }
+.hint { font-size: 12px; }
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+.card .value { font-size: 26px; font-weight: 650; }
+.card .pct { font-size: 13px; color: var(--muted); margin-left: 6px; }
+.card .label { color: var(--muted); font-size: 12px; margin-top: 2px; }
+.card.green { border-color: #1f6b32; }
+.card.green .value { color: var(--green); }
+.card.yellow { border-color: #6b561a; }
+.card.yellow .value { color: var(--yellow); }
+.card.red { border-color: #7a2220; }
+.card.red .value { color: var(--red); }
+.card.gray { border-color: #3b4250; }
+.card.gray .value { color: #b6bfcc; }
+.card.blue { border-color: #1f4e7a; }
+.card.blue .value { color: var(--blue); }
+.note {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  border-radius: 10px;
+  padding: 14px 18px;
+  color: var(--muted);
+}
+.note strong { color: var(--text); }
+.note h2 { color: var(--text); font-size: 16px; margin: 0 0 10px; }
+.note p { margin: 0 0 9px; }
+.note p:last-child { margin-bottom: 0; }
+.defs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+  margin: 0 0 12px;
+}
+.defs div {
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.defs h3 { margin: 0 0 4px; font-size: 13px; color: var(--text); }
+.defs p { margin: 0; font-size: 13px; }
+.example-box {
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin: 0 0 12px;
+  font-size: 13px;
+}
+.example-box ul { margin: 6px 0 0; padding-left: 20px; }
+.example-box li { margin: 2px 0; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+.controls { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.controls input, .controls select {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font: inherit;
+}
+.controls input { min-width: 320px; }
+table.plain {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+}
+table.plain th, table.plain td {
+  padding: 9px 11px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+}
+table.plain th { vertical-align: top; }
+table.plain td { vertical-align: baseline; }
+table.plain td > code,
+table.plain td .badge,
+table.plain td .chip { vertical-align: baseline; }
+table.plain thead th {
+  background: var(--panel-2);
+  color: var(--muted);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: .03em;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+table.plain tbody tr:hover { background: #14203c; }
+table.plain tbody tr:last-child td { border-bottom: none; }
+table.sortable th[data-sort] { cursor: pointer; user-select: none; }
+table.sortable th[data-sort]:hover { color: var(--text); }
+th.sorted-desc::after { content: " ↓"; color: var(--accent); }
+th.sorted-asc::after { content: " ↑"; color: var(--accent); }
+.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.wide { min-width: 180px; }
+.muted { color: var(--muted); }
+code {
+  background: #0b1428;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 1px 5px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12.5px;
+}
+.bar {
+  height: 7px;
+  background: #0b1428;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  margin-top: 5px;
+  overflow: hidden;
+}
+.bar span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #2f81f7, #58a6ff);
+}
+.badge {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+.badge-passed { color: var(--green); border-color: #1f6b32; background: #0f2a18; }
+.badge-warning { color: var(--yellow); border-color: #6b561a; background: #2a2210; }
+.badge-failed { color: var(--red); border-color: #7a2220; background: #2a1212; }
+.badge-unverified { color: #b6bfcc; border-color: #3b4250; background: #1a1f29; }
+.badge-negative-pass { color: var(--blue); border-color: #1f4e7a; background: #0f1f33; }
+.badge-unknown { color: var(--muted); border-color: var(--line); }
+.chips-inner {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  width: 100%;
+  vertical-align: baseline;
+}
+.chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 1px 6px;
+  font-size: 12px;
+  line-height: 18px;
+}
+.chip .count {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.chip code { border: none; background: transparent; padding: 0; }
+#tests-table th:last-child,
+#tests-table td.links {
+  width: 1%;
+  white-space: nowrap;
+  text-align: right;
+}
+.example { min-width: 180px; }
+
+#constructs-table td:first-child { width: 38%; }
+#constructs-table td:last-child { overflow-wrap: anywhere; }
+#constructs-table td a {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12.5px;
+}
+</style>
+</head>
+<body>
+<header><h1>VerihoggFormat: warning constructs</h1><p class="meta">0 constructs · <a href="unsupported.html">Full report</a></p></header>
+<main>
+<section><p class="lead">One example test for each construct that produces a warning. The link opens the test source.</p><table class="plain" id="constructs-table"><thead><tr><th>Construct</th><th>Example code</th></tr></thead><tbody></tbody></table></section>
+</main>
+</body>
+</html>

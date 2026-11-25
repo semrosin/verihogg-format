@@ -1,0 +1,1 @@
+config_loader_data['verihoggformat/8.18'] = [["","var_local",1,"logs/VerihoggFormat/chapter-8/8.18--var_local.sv.log.html","tests/chapter-8/8.18--var_local.sv.html"],["","var_protected",1,"logs/VerihoggFormat/chapter-8/8.18--var_protected.sv.log.html","tests/chapter-8/8.18--var_protected.sv.html"]]
