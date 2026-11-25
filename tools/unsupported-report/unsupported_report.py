@@ -333,7 +333,7 @@ def render_html(
             )
         rows.append(
             "<tr>"
-            f"<td>{display_html(label)}</td>"
+            f'<td data-label="{html.escape(label)}">{display_html(label)}</td>'
             f'<td class="muted">{html.escape(type_label(label))}</td>'
             f'<td class="num">{item.count}</td>'
             f"<td>{'<br>'.join(file_parts)}</td>"

@@ -13,7 +13,7 @@ from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import quote
 
-from unsupported_report import CSS
+from unsupported_report import CSS, display_html
 
 DEFAULT_PROJECTS_DIR = Path(__file__).resolve().parent / "projects"
 DEFAULT_OUTPUT = Path(__file__).resolve().parent / "index.html"
@@ -30,12 +30,14 @@ class ProjectPage:
     name: str
     path: Path
     rows: list[list[tuple[str, str]]]
+    labels: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass
 class Aggregate:
     construct: str
     error_type: str
+    label: str
     count: int = 0
     projects: set[str] = field(default_factory=set)
 
@@ -48,9 +50,11 @@ class PageParser(HTMLParser):
         self.in_row = False
         self.in_cell = False
         self.cell_tag = ""
+        self.cell_label = ""
         self.cell_parts: list[str] = []
         self.row: list[tuple[str, str]] = []
         self.rows: list[list[tuple[str, str]]] = []
+        self.labels: dict[str, str] = {}
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         if tag == "h1":
@@ -61,6 +65,7 @@ class PageParser(HTMLParser):
         elif tag in {"td", "th"} and self.in_row:
             self.in_cell = True
             self.cell_tag = tag
+            self.cell_label = dict(attrs).get("data-label") or ""
             self.cell_parts = []
         elif tag == "br" and self.in_cell:
             self.cell_parts.append(" ")
@@ -71,8 +76,11 @@ class PageParser(HTMLParser):
         elif tag in {"td", "th"} and self.in_cell and tag == self.cell_tag:
             text = " ".join("".join(self.cell_parts).split())
             self.row.append((self.cell_tag, text))
+            if self.cell_tag == "td" and len(self.row) == 1 and self.cell_label:
+                self.labels[text] = self.cell_label
             self.in_cell = False
             self.cell_tag = ""
+            self.cell_label = ""
         elif tag == "tr" and self.in_row:
             if self.row and all(kind == "td" for kind, _ in self.row):
                 self.rows.append(self.row)
@@ -120,7 +128,7 @@ def read_page(path: Path) -> ProjectPage:
     parser = PageParser()
     parser.feed(path.read_text(encoding="utf-8"))
     name = parser.project_name or path.stem.removeprefix("unsupported-")
-    return ProjectPage(name=name, path=path, rows=parser.rows)
+    return ProjectPage(name=name, path=path, rows=parser.rows, labels=parser.labels)
 
 
 def find_pages(projects_dir: Path, output: Path) -> list[ProjectPage]:
@@ -150,7 +158,13 @@ def aggregate(pages: list[ProjectPage]) -> dict[tuple[str, str], Aggregate]:
             if not construct:
                 continue
             key = (construct, error_type)
-            item = result.setdefault(key, Aggregate(construct, error_type))
+            label = page.labels.get(construct, construct)
+            item = result.get(key)
+            if item is None:
+                item = Aggregate(construct, error_type, label)
+                result[key] = item
+            elif item.label == item.construct and label != construct:
+                item.label = label
             item.count += count
             item.projects.add(page.name)
     return result
@@ -194,7 +208,7 @@ def render_html(
         )
         rows.append(
             "<tr>"
-            f"<td><code>{html.escape(item.construct)}</code></td>"
+            f"<td>{display_html(item.label)}</td>"
             f'<td class="muted">{html.escape(item.error_type)}</td>'
             f'<td class="num">{item.count}</td>'
             f"<td>{project_links}</td>"
