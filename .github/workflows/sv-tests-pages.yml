@@ -31,16 +31,19 @@ jobs:
           ref: eabb1204f2a3a23f51d0400a472e5d568a30b468
           path: sv-tests
 
-      - name: Checkout report generators only
-        uses: actions/checkout@v6
-        with:
-          repository: verihogg/sv-tests-results
-          ref: refs/heads/feat/constructs-report-design
-          path: report-generators
-          sparse-checkout: |
-            /tools/sv_tests_unsupported_report.py
-            /tools/sv_tests_warning_constructs.py
-          sparse-checkout-cone-mode: false
+      - name: Download report generators
+        env:
+          REPORT_GENERATORS_REF: refs/heads/feat/constructs-report-design
+        run: |
+          generator_ref=$(git ls-remote --exit-code --refs \
+            https://github.com/verihogg/sv-tests-results.git "$REPORT_GENERATORS_REF")
+          read -r generator_revision _ <<< "$generator_ref"
+          mkdir -p report-generators/tools
+          for script in sv_tests_unsupported_report.py sv_tests_warning_constructs.py; do
+            curl --fail --silent --show-error --location --retry 3 \
+              --output "report-generators/tools/$script" \
+              "https://raw.githubusercontent.com/verihogg/sv-tests-results/$generator_revision/tools/$script"
+          done
 
       - name: Install test dependencies
         run: |
