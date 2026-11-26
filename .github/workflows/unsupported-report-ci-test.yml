@@ -15,7 +15,44 @@ concurrency:
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout formatter
+        uses: actions/checkout@v6
+        with:
+          path: formatter
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+
+      - name: Build formatter and export closure
+        working-directory: formatter
+        run: |
+          set -euo pipefail
+          out="$(nix build .#verihogg-format --no-link --print-out-paths)"
+          test -x "$out/bin/verihogg-format"
+          mkdir -p "$GITHUB_WORKSPACE/closure"
+          printf '%s\n' "$out" > "$GITHUB_WORKSPACE/closure/formatter-root.txt"
+          mapfile -t closure < <(nix-store -qR "$out")
+          test "${#closure[@]}" -gt 0
+          nix-store --export "${closure[@]}" \
+            | zstd -3 -T0 -c > "$GITHUB_WORKSPACE/closure/formatter.closure.zst"
+          ls -lh "$GITHUB_WORKSPACE/closure"
+
+      - name: Upload formatter closure
+        uses: actions/upload-artifact@v7
+        with:
+          name: formatter-closure
+          path: closure/
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0
+
   report:
+    needs: build
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     strategy:
@@ -57,17 +94,33 @@ jobs:
             ref: main
 
     steps:
-      - name: Checkout formatter
+      - name: Checkout report tools
         uses: actions/checkout@v6
         with:
           path: formatter
+          sparse-checkout: tools
 
-      - name: Install Nix
+      - name: Install Nix (for closure import only)
         uses: cachix/install-nix-action@v31
+        with:
+          set_as_trusted_user: true
 
-      - name: Build formatter
-        working-directory: formatter
-        run: nix build .#verihogg-format
+      - name: Download formatter closure
+        uses: actions/download-artifact@v8
+        with:
+          name: formatter-closure
+          path: formatter-closure
+
+      - name: Import formatter
+        run: |
+          set -euo pipefail
+          test -s formatter-closure/formatter-root.txt
+          test -s formatter-closure/formatter.closure.zst
+          zstd -dc formatter-closure/formatter.closure.zst \
+            | nix-store --import > /dev/null
+          root="$(cat formatter-closure/formatter-root.txt)"
+          test -x "$root/bin/verihogg-format"
+          echo "FORMATTER=$root/bin/verihogg-format" >> "$GITHUB_ENV"
 
       - name: Checkout ${{ matrix.project.name }}
         uses: actions/checkout@v6
@@ -78,9 +131,10 @@ jobs:
 
       - name: Generate ${{ matrix.project.name }} report
         run: |
+          set -euo pipefail
           python3 formatter/tools/unsupported-report/unsupported_report.py \
             "src/${{ matrix.project.name }}" \
-            --formatter "formatter/result/bin/verihogg-format" \
+            --formatter "$FORMATTER" \
             --jobs 4 \
             -o "out/projects/unsupported-${{ matrix.project.name }}.html"
 
@@ -107,10 +161,11 @@ jobs:
     timeout-minutes: 15
 
     steps:
-      - name: Checkout formatter
+      - name: Checkout report tools
         uses: actions/checkout@v6
         with:
           path: formatter
+          sparse-checkout: tools
 
       - name: Download project reports
         uses: actions/download-artifact@v8
@@ -121,12 +176,14 @@ jobs:
 
       - name: Build index
         run: |
+          set -euo pipefail
           python3 formatter/tools/unsupported-report/build_index.py \
             --projects-dir out/projects \
             -o out/index.html
 
       - name: Verify output
         run: |
+          set -euo pipefail
           find out -maxdepth 3 -type f -print
           test -s out/index.html
           for project in \
@@ -137,9 +194,11 @@ jobs:
           done
           grep -q '<code>automatic</code> <span class="muted">AutomaticKeyword</span>' out/index.html
           if grep -q '<code>automatic AutomaticKeyword</code>' out/index.html; then
+            echo "Unexpected merged token format in index.html" >&2
             exit 1
           fi
-          if grep -R '/home/darya/verilog\|/nix/store' out; then
+          if grep -RIn '/nix/store' out; then
+            echo "Nix store path leaked into reports" >&2
             exit 1
           fi
 
