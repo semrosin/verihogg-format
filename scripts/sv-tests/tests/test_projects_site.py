@@ -8,6 +8,19 @@ TOOLS = Path(__file__).resolve().parents[3] / "tools" / "unsupported-report"
 
 
 class ProjectsSiteTest(unittest.TestCase):
+    def test_home_links_to_reports_without_construct_tabs(self):
+        with TemporaryDirectory() as temporary:
+            site = Path(temporary)
+            for name in ("index.html", "unsupported.html", "constructs.html"):
+                (site / name).touch()
+            prepare_home = Path(__file__).resolve().parents[1] / "prepare-home.py"
+            subprocess.run([sys.executable, str(prepare_home), str(site)], check=True)
+
+            home = (site / "index.html").read_text(encoding="utf-8")
+            self.assertNotIn('aria-label="Construct reports"', home)
+            self.assertIn('href="report.html"', home)
+            self.assertIn('href="history.html"', home)
+
     def test_project_with_only_failed_scans_produces_no_report(self):
         with TemporaryDirectory() as temporary:
             root = Path(temporary)
