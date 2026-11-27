@@ -129,19 +129,27 @@ jobs:
 
       - name: Update formatter support history
         env:
-          HISTORY_REMOTE: https://github.com/${{ github.repository == 'verihogg/verihogg-format' && 'verihogg/sv-tests-results' || github.repository }}.git
+          HISTORY_REMOTE: https://github.com/verihogg/sv-tests-results.git
           # Fine-grained token with Contents write on sv-tests-results.
-          GH_TOKEN: ${{ github.repository == 'verihogg/verihogg-format' && github.ref == 'refs/heads/main' && secrets.REPORT_HISTORY_TOKEN || '' }}
+          GH_TOKEN: ${{ (github.repository == 'verihogg/verihogg-format' || github.repository == 'semrosin/verihogg-format') && github.ref == 'refs/heads/main' && secrets.REPORT_HISTORY_TOKEN || '' }}
         run: |
+          publisher=formatter/scripts/sv-tests/publish-history.sh
+          snapshot="$RUNNER_TEMP/formatter-history-snapshot.json"
           options=()
           if [[ -n "$GH_TOKEN" ]]; then
             gh auth setup-git --hostname github.com
-            options+=(--publish)
-          elif [[ "$GITHUB_REPOSITORY:$GITHUB_REF" == 'verihogg/verihogg-format:refs/heads/main' ]]; then
+            if [[ "$GITHUB_REPOSITORY" == 'verihogg/verihogg-format' ]]; then
+              options+=(--publish)
+            else
+              preview=$(mktemp -d)
+              trap 'rm -rf -- "$preview"' EXIT
+              HISTORY_REF=refs/heads/formatter-history-preview \
+                bash "$publisher" formatter "$preview" "$snapshot" --publish
+            fi
+          else
             echo "::warning::REPORT_HISTORY_TOKEN is missing. Publishing the existing support history without a new snapshot."
           fi
-          bash formatter/scripts/sv-tests/publish-history.sh formatter sv-tests/out/report \
-            "$RUNNER_TEMP/formatter-history-snapshot.json" "${options[@]}"
+          bash "$publisher" formatter sv-tests/out/report "$snapshot" "${options[@]}"
 
       - name: Upload incomplete report for debugging
         if: failure()

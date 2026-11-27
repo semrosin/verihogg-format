@@ -5,7 +5,7 @@ formatter=${1:?Pass the formatter checkout}
 report=${2:?Pass the generated report directory}
 snapshot=${3:?Pass the current snapshot file}
 remote=${HISTORY_REMOTE:-}
-ref=refs/heads/formatter-history
+ref=${HISTORY_REF:-refs/heads/formatter-history}
 
 archive=$(mktemp -d)
 trap 'rm -rf -- "$archive"' EXIT
@@ -25,7 +25,7 @@ if [[ -n "$remote" ]]; then
 fi
 
 args=(--archive "$archive" --report "$report" --snapshot "$snapshot"
-      --repository "${GITHUB_REPOSITORY:-${FORMATTER_REPOSITORY:-verihogg/verihogg-format}}")
+      --repository verihogg/verihogg-format)
 if [[ "${4:-}" == --publish ]]; then
   : "${remote:?Set HISTORY_REMOTE when publishing}"
   args+=(--record-from "$formatter")
