@@ -15,6 +15,8 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 
+from site_layout import document
+
 DEFAULT_EXTENSIONS = {".sv", ".svh"}
 SKIP_DIRS = {".git", "build", "out", "venv", ".venv", "node_modules"}
 DEFAULT_TIMEOUT_SECONDS = 120.0
@@ -255,9 +257,8 @@ def scan_file(formatter: str, path: Path, timeout: float) -> dict:
         return {"file": str(path), "error": str(exc)}
 
     entries = parse_summary(completed.stderr)
-    if not entries and (
-        "Error:" in completed.stderr or "cannot read" in completed.stderr.lower()
-    ):
+    reported_error = "Error:" in completed.stderr or "cannot read" in completed.stderr.lower()
+    if completed.returncode != 0 or (not entries and reported_error):
         message = completed.stderr.strip() or f"exit code {completed.returncode}"
         return {"file": str(path), "error": message}
 
@@ -311,6 +312,8 @@ def render_html(
     stats: dict[str, ConstructStats],
     errors: list[dict],
     formatter: str,
+    *,
+    site: bool = False,
 ) -> str:
     generated = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
     total_occurrences = sum(item.count for item in stats.values())
@@ -362,12 +365,33 @@ def render_html(
         error_section = f"<section><h2>Skipped files</h2><ul>{items}</ul></section>"
 
     cards = [
-        (len(files), "Files scanned"),
+        (len(files) - len(errors) if site else len(files), "Files scanned"),
         (files_with_warnings, "Files with warnings"),
         (len(stats), "Unique constructs"),
         (total_occurrences, "Occurrences"),
         (len(errors), "Skipped files"),
     ]
+    table = (
+        "<table>"
+        "<thead><tr><th>Construct</th><th>Error type</th>"
+        '<th class="num">Count</th><th>Files</th></tr></thead>'
+        f"<tbody>{body}</tbody></table>"
+    )
+    if site:
+        stats_html = "".join(
+            f"<div><dt>{label}</dt><dd>{value}</dd></div>" for value, label in cards
+        )
+        return document(
+            project,
+            f'<p class="meta">Generated {generated}</p>'
+            f'<dl class="project-stats">{stats_html}</dl>'
+            '<section><h2>Constructs</h2>'
+            '<p class="lead">Locations show the first occurrence per file.</p>'
+            f'<div class="table-scroll" tabindex="0" role="region" aria-label="Constructs table">{table}</div>'
+            f'</section>{error_section}',
+            detail=True,
+        )
+
     card_html = "".join(
         '<div class="card">'
         f'<div class="value">{value}</div>'
@@ -395,10 +419,7 @@ def render_html(
         '<p class="lead">Grouped from the formatter end-of-run summary. '
         "Counts are occurrences; locations point to the first occurrence "
         "in each file.</p>"
-        "<table>"
-        "<thead><tr><th>Construct</th><th>Error type</th>"
-        '<th class="num">Count</th><th>Files</th></tr></thead>'
-        f"<tbody>{body}</tbody></table>"
+        f"{table}"
         "</section>\n"
         f"{error_section}\n"
         f'<p class="muted">Formatter: <code>{html.escape(Path(formatter).name)}</code></p>\n'
@@ -465,6 +486,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         type=int,
         help="parallel formatter processes (default: CPU count)",
     )
+    parser.add_argument("--site", action="store_true", help="render for the combined Pages site")
     return parser.parse_args(argv)
 
 
@@ -496,7 +518,10 @@ def main(argv: list[str]) -> int:
             f"Skipped {relative_path(error['file'], root)}: {error['error']}",
             file=sys.stderr,
         )
-    page = render_html(project, root, files, stats, errors, formatter)
+    if args.site and len(errors) == len(files):
+        die(f"Could not scan any files in {root}")
+
+    page = render_html(project, root, files, stats, errors, formatter, site=args.site)
     output.write_text(page, encoding="utf-8")
 
     print(

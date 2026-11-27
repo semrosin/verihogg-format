@@ -13,6 +13,7 @@ from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import quote
 
+from site_layout import document
 from unsupported_report import CSS, display_html
 
 DEFAULT_PROJECTS_DIR = Path(__file__).resolve().parent / "projects"
@@ -121,6 +122,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         default=DEFAULT_OUTPUT,
         help="output HTML path (default: tools/unsupported-report/index.html)",
     )
+    parser.add_argument("--site", action="store_true", help="render for the combined Pages site")
     return parser.parse_args(argv)
 
 
@@ -179,6 +181,8 @@ def render_html(
     pages: list[ProjectPage],
     aggregates: dict[tuple[str, str], Aggregate],
     output: Path,
+    *,
+    site: bool = False,
 ) -> str:
     generated = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
     hrefs = {page.name: href_for(page, output) for page in pages}
@@ -189,9 +193,16 @@ def render_html(
             f"{html.escape(page.name)}</a></li>"
             for page in pages
         )
-        projects = f'<ul class="projects">{links}</ul>'
+        list_class = "project-list" if site else "projects"
+        projects = f'<ul class="{list_class}">{links}</ul>'
     else:
         projects = '<p class="muted">No project pages found.</p>'
+
+    if site and not pages:
+        return document(
+            "Unsupported constructs in projects",
+            '<p class="muted">No project reports are available for this run.</p>',
+        )
 
     rows: list[str] = []
     for item in sorted(
@@ -202,7 +213,7 @@ def render_html(
             entry.error_type.casefold(),
         ),
     ):
-        project_links = "<br>".join(
+        project_links = (", " if site else "<br>").join(
             f'<a href="{html.escape(hrefs[name])}">{html.escape(name)}</a>'
             for name in sorted(item.projects, key=str.casefold)
         )
@@ -223,6 +234,23 @@ def render_html(
             "No unsupported constructs found.</td></tr>"
         )
 
+    table = (
+        "<table>"
+        "<thead><tr><th>Construct</th><th>Error type</th>"
+        '<th class="num">Count</th><th>Projects</th></tr></thead>'
+        f"<tbody>{body}</tbody></table>"
+    )
+    if site:
+        return document(
+            "Unsupported constructs in projects",
+            f'<p class="meta">Generated {generated}</p>'
+            f'<section><h2>Projects scanned ({len(pages)})</h2>{projects}</section>'
+            '<section><h2>Constructs</h2>'
+            '<p class="lead">Occurrences across the projects listed above.</p>'
+            f'<div class="table-scroll" tabindex="0" role="region" aria-label="Constructs table">{table}</div>'
+            '</section>',
+        )
+
     return (
         "<!doctype html>\n"
         '<html lang="en">\n<head>\n<meta charset="utf-8">\n'
@@ -240,10 +268,7 @@ def render_html(
         "<section><h2>Constructs</h2>"
         '<p class="lead">Aggregated by construct and error type. '
         "Counts are occurrences across all projects.</p>"
-        "<table>"
-        "<thead><tr><th>Construct</th><th>Error type</th>"
-        '<th class="num">Count</th><th>Projects</th></tr></thead>'
-        f"<tbody>{body}</tbody></table>"
+        f"{table}"
         "</section>\n"
         "</main>\n</body>\n</html>\n"
     )
@@ -260,7 +285,7 @@ def main(argv: list[str]) -> int:
 
     pages = find_pages(projects_dir, output)
     aggregates = aggregate(pages)
-    page = render_html(pages, aggregates, output)
+    page = render_html(pages, aggregates, output, site=args.site)
     output.write_text(page, encoding="utf-8")
 
     print(

@@ -12,7 +12,45 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout formatter
+        uses: actions/checkout@v6
+        with:
+          path: formatter
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+
+      - name: Build formatter and export closure
+        working-directory: formatter
+        run: |
+          set -euo pipefail
+          out="$(nix build .#verihogg-format --no-link --print-out-paths)"
+          test -x "$out/bin/verihogg-format"
+          mkdir -p "$GITHUB_WORKSPACE/closure"
+          printf '%s\n' "$out" > "$GITHUB_WORKSPACE/closure/formatter-root.txt"
+          mapfile -t closure < <(nix-store -qR "$out")
+          test "${#closure[@]}" -gt 0
+          nix-store --export "${closure[@]}" \
+            | zstd -3 -T0 -c > "$GITHUB_WORKSPACE/closure/formatter.closure.zst"
+          ls -lh "$GITHUB_WORKSPACE/closure"
+
+      - name: Upload formatter closure
+        uses: actions/upload-artifact@v7
+        with:
+          name: formatter-closure
+          path: closure/
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0
+          overwrite: true
+
   report:
+    needs: build
     runs-on: ubuntu-24.04
     timeout-minutes: 350
     env:
@@ -37,16 +75,13 @@ jobs:
 
       - name: Download report generators
         env:
-          REPORT_GENERATORS_REF: refs/heads/feat/constructs-report-design
+          REPORT_GENERATORS_REVISION: 26b0633fa7dec51bdda6824f12a652ec7a7e9c0b
         run: |
-          generator_ref=$(git ls-remote --exit-code --refs \
-            https://github.com/verihogg/sv-tests-results.git "$REPORT_GENERATORS_REF")
-          read -r generator_revision _ <<< "$generator_ref"
           mkdir -p report-generators/tools
           for script in sv_tests_unsupported_report.py sv_tests_warning_constructs.py; do
             curl --fail --silent --show-error --location --retry 3 \
               --output "report-generators/tools/$script" \
-              "https://raw.githubusercontent.com/verihogg/sv-tests-results/$generator_revision/tools/$script"
+              "https://raw.githubusercontent.com/verihogg/sv-tests-results/$REPORT_GENERATORS_REVISION/tools/$script"
           done
 
       - name: Install test dependencies
@@ -60,12 +95,19 @@ jobs:
       - name: Install Nix
         uses: cachix/install-nix-action@v31
 
-      - name: Build formatter and Slang
+      - name: Download formatter closure
+        uses: actions/download-artifact@v8
+        with:
+          name: formatter-closure
+          path: formatter-closure
+
+      - name: Import formatter
+        run: bash formatter/scripts/sv-tests/import-formatter.sh formatter-closure
+
+      - name: Build Slang
         working-directory: formatter
         run: |
-          nix build .#verihogg-format
           mkdir -p "$GITHUB_WORKSPACE/runner-bin"
-          ln -s "$PWD/result/bin/verihogg-format" "$GITHUB_WORKSPACE/runner-bin/verihogg-format"
           slang_store=$(nix build --no-link --print-out-paths --impure --expr \
             '(builtins.getFlake (toString ./.)).inputs.nixpkgs.legacyPackages.x86_64-linux.sv-lang')
           ln -s "$slang_store/bin/slang" "$GITHUB_WORKSPACE/runner-bin/slang-driver"
@@ -112,21 +154,150 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
+      - name: Archive the base site
+        run: tar --dereference --hard-dereference -C sv-tests/out/report -cf sv-tests-site.tar .
+
+      - name: Upload the base site
+        uses: actions/upload-artifact@v7
+        with:
+          name: sv-tests-site
+          path: sv-tests-site.tar
+          if-no-files-found: error
+          retention-days: 1
+          overwrite: true
+
+  projects:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        project:
+          - name: black-parrot
+            repository: black-parrot/black-parrot
+            ref: master
+          - name: cheriot-ibex-dv
+            repository: lowRISC/cheriot-ibex-dv
+            ref: main
+          - name: cheriot-ibex-rtl
+            repository: microsoft/cheriot-ibex
+            ref: 14e275b4d36486c9979a76248791c410145ea50b
+          - name: core-v-verif
+            repository: openhwfoundation/core-v-verif
+            ref: master
+          - name: cva6
+            repository: openhwfoundation/cva6
+            ref: main
+          - name: cva6-cvfpu
+            repository: openhwfoundation/cvfpu
+            ref: 3eb6afeab2cb33f7d8689222955d0171aeb3a801
+          - name: cva6-hpdcache
+            repository: openhwfoundation/cv-hpdcache
+            ref: 40d2897eda70644df2eb857efd9fa573eaacafab
+          - name: ibex
+            repository: lowRISC/ibex
+            ref: master
+          - name: opentitan
+            repository: lowRISC/opentitan
+            ref: master
+          - name: scr1
+            repository: syntacore/scr1
+            ref: master
+          - name: uvm-core
+            repository: accellera-official/uvm-core
+            ref: main
+
+    steps:
+      - name: Checkout report tools
+        uses: actions/checkout@v6
+        with:
+          path: formatter
+          sparse-checkout: |
+            tools/unsupported-report
+            scripts/sv-tests
+
+      - name: Install Nix (for closure import only)
+        uses: cachix/install-nix-action@v31
+
+      - name: Download formatter closure
+        uses: actions/download-artifact@v8
+        with:
+          name: formatter-closure
+          path: formatter-closure
+
+      - name: Import formatter
+        run: bash formatter/scripts/sv-tests/import-formatter.sh formatter-closure
+
+      - name: Checkout ${{ matrix.project.name }}
+        uses: actions/checkout@v6
+        with:
+          repository: ${{ matrix.project.repository }}
+          ref: ${{ matrix.project.ref }}
+          path: src/${{ matrix.project.name }}
+
+      - name: Generate ${{ matrix.project.name }} report
+        run: |
+          set -euo pipefail
+          python3 formatter/tools/unsupported-report/unsupported_report.py \
+            "src/${{ matrix.project.name }}" \
+            --site \
+            -o "out/projects/unsupported-${{ matrix.project.name }}.html"
+
+      - name: Upload project report
+        uses: actions/upload-artifact@v7
+        with:
+          name: unsupported-project-${{ matrix.project.name }}
+          path: out/projects/unsupported-${{ matrix.project.name }}.html
+          overwrite: true
+          if-no-files-found: error
+          retention-days: 7
+
+  assemble:
+    needs: [report, projects]
+    if: ${{ !cancelled() && needs.report.result == 'success' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout report tools
+        uses: actions/checkout@v6
+        with:
+          sparse-checkout: tools/unsupported-report
+
+      - name: Download the base site
+        uses: actions/download-artifact@v8
+        with:
+          name: sv-tests-site
+
+      - name: Download available project reports
+        uses: actions/download-artifact@v8
+        with:
+          pattern: unsupported-project-*
+          path: project-artifacts
+          merge-multiple: true
+
+      - name: Assemble report pages
+        run: |
+          mkdir -p site project-artifacts
+          tar -xf sv-tests-site.tar -C site
+          python3 tools/unsupported-report/assemble_site.py site project-artifacts
+
       - name: Upload report for inspection
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: sv-tests-report
-          path: sv-tests/out/report/
+          path: site/
           if-no-files-found: error
           retention-days: 14
+          overwrite: true
 
       - name: Package Pages artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
-          path: sv-tests/out/report/
+          path: site/
 
   deploy:
-    needs: report
+    needs: assemble
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     permissions:
@@ -138,4 +309,4 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
