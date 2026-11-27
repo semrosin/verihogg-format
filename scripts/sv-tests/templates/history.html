@@ -6,43 +6,45 @@
   <title>Unsupported constructs · verihogg reports</title>
   <link rel="stylesheet" href="sv-tests-reports.css">
   <style>
+    .brand { font-size: clamp(22px, 2.8vw, 39px); }
     .brand a { color: inherit; text-decoration: none; }
     main {
       --timeline-inset: clamp(8px, 1.6vw, 24px);
       --timeline-item-margin: 6px;
       --timeline-item-indent: 24px;
       padding: 44px 0 64px;
+      font-size: 19px;
     }
     a { color: var(--blue); text-underline-offset: .18em; }
     a:focus-visible, summary:focus-visible { outline: 2px solid var(--blue); outline-offset: 4px; }
-    h1 { margin: 0 0 12px; font-size: clamp(32px, 6vw, 62px); line-height: 1.02; letter-spacing: -.05em; }
+    h1 { margin: 0 0 12px; font-size: clamp(32px, 6.2vw, 64px); line-height: 1.02; letter-spacing: -.05em; }
     .current { margin: 28px 0 38px calc(var(--timeline-inset) + var(--timeline-item-margin) + var(--timeline-item-indent)); }
     .timeline { list-style: none; margin: 0 var(--timeline-inset); padding: 0; }
     .timeline > li {
-      --marker-y: 10px; position: relative; margin-left: var(--timeline-item-margin);
+      --marker-y: 14px; position: relative; margin-left: var(--timeline-item-margin);
       padding: 0 0 28px var(--timeline-item-indent);
     }
     .timeline > li::before {
-      content: ""; position: absolute; inset: 0 auto 0 0; border-left: 1px solid #939bb1;
+      content: ""; position: absolute; inset: 0 auto 0 0; border-left: 3px solid #939bb1;
     }
     .timeline > li:first-child::before { top: var(--marker-y); }
     .timeline > li:last-child::before { bottom: auto; height: var(--marker-y); }
     .timeline > li:only-child::before { display: none; }
     .timeline > li::after {
-      content: ""; position: absolute; box-sizing: border-box; top: calc(var(--marker-y) - 5px);
-      left: -5px; width: 11px; height: 11px;
-      border: 2px solid var(--blue); border-radius: 50%; background: var(--paper);
+      content: ""; position: absolute; box-sizing: border-box; top: calc(var(--marker-y) - 9px);
+      left: -7.5px; width: 18px; height: 18px;
+      border: 3px solid var(--blue); border-radius: 50%; background: var(--paper);
     }
-    .timeline > .no-changes { --marker-y: 30px; padding-block: 20px 46px; }
+    .timeline > .no-changes { --marker-y: 34px; padding-block: 20px 46px; }
     .timeline > .no-changes::before { border-left-style: dashed; }
     .timeline > .no-changes::after { border-color: #687590; }
-    h2 { margin: 0; font-size: 17px; line-height: 1.4; overflow-wrap: anywhere; }
+    h2 { margin: 0; font-size: 21px; line-height: 1.4; overflow-wrap: anywhere; }
     h2 a, .no-changes li > a:first-child { color: var(--ink); text-decoration: none; }
     h2 a:hover, h2 a:focus-visible, .no-changes li > a:first-child:hover { text-decoration: underline; }
-    code, time { font: 13px var(--mono); color: #4a5772; white-space: nowrap; }
+    code, time { font: 16px var(--mono); color: #4a5772; white-space: nowrap; }
     time { display: inline-block; margin-left: .4em; }
-    .timeline p, details { margin: 6px 0 0; font-size: 15px; line-height: 1.45; }
-    .diagnostic-change { margin: 10px 0 0 20px; font-size: 13px; }
+    .timeline p, details { margin: 6px 0 0; line-height: 1.45; }
+    .diagnostic-change { margin: 10px 0 0 20px; font-size: 16px; }
     .diagnostic-change + .diagnostic-change { margin-top: 4px; }
     .no-changes details { margin: 0; }
     summary { width: fit-content; cursor: pointer; color: #4a5772; }
