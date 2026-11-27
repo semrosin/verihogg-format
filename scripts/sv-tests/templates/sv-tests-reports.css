@@ -1,5 +1,6 @@
 :root {
   color-scheme: light;
+  scrollbar-gutter: stable both-edges;
   --ink: #071735;
   --blue: #1234ff;
   --paper: #fbf8f6;
@@ -34,7 +35,7 @@ body { margin: 0; background: var(--paper); color: var(--ink); font-family: Aria
   letter-spacing: -.045em;
   overflow-wrap: anywhere;
 }
-.report-nav {
+.report-header .report-nav {
   display: flex;
   flex-wrap: wrap;
   gap: 0 clamp(.25rem, 2vw, 1.5rem);

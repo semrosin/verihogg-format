@@ -12,7 +12,7 @@ class ProjectsSiteTest(unittest.TestCase):
         with TemporaryDirectory() as temporary:
             site = Path(temporary)
             for name in ("index.html", "unsupported.html", "constructs.html"):
-                (site / name).touch()
+                (site / name).write_text("<head>\n<style></style>\n</head>", encoding="utf-8")
             prepare_home = Path(__file__).resolve().parents[1] / "prepare-home.py"
             subprocess.run([sys.executable, str(prepare_home), str(site)], check=True)
 
@@ -20,6 +20,10 @@ class ProjectsSiteTest(unittest.TestCase):
             self.assertNotIn('aria-label="Construct reports"', home)
             self.assertIn('href="report.html"', home)
             self.assertIn('href="history.html"', home)
+            stylesheet = '<link rel="stylesheet" href="sv-tests-reports.css">'
+            for name in ("unsupported.html", "constructs.html"):
+                page = (site / name).read_text(encoding="utf-8")
+                self.assertIn(stylesheet, page.split("<style>", 1)[0])
 
     def test_project_with_only_failed_scans_produces_no_report(self):
         with TemporaryDirectory() as temporary:
