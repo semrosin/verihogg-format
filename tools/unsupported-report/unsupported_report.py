@@ -328,6 +328,8 @@ def render_html(
             item.files.items(), key=lambda pair: relative_path(pair[0], root)
         ):
             location = html.escape(relative_path(file_path, root))
+            if site:
+                location = location.replace("/", "/<wbr>")
             if occurrence.first_line:
                 location = f"{location}:{occurrence.first_line}"
             file_parts.append(
