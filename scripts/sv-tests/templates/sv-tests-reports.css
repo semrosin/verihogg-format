@@ -114,10 +114,10 @@ body { margin: 0; background: var(--paper); color: var(--ink); font-family: Aria
 .report-content .num { text-align: right; width: 6.5rem; font-variant-numeric: tabular-nums; }
 
 @media (max-width: 40rem) {
-  .report-content table { min-width: 21rem; font-size: .875rem; }
-  .report-content th { font-size: .8125rem; }
-  .report-content th, .report-content td { padding: .5rem .375rem; }
-  .report-content th:first-child { width: 24%; }
-  .report-content th:nth-child(2) { width: 30%; }
-  .report-content .num { width: 14%; white-space: nowrap; }
+  .report-content table { min-width: 30rem; font-size: .875rem; }
+  .report-content th { font-size: .8125rem; white-space: nowrap; }
+  .report-content th, .report-content td { padding: .5rem .625rem; }
+  .report-content th:first-child,
+  .report-content th:nth-child(2) { width: 22%; }
+  .report-content .num { width: 4.5rem; white-space: nowrap; }
 }
