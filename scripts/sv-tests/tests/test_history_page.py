@@ -8,6 +8,20 @@ from test_history import snapshot
 
 
 class HistoryPageTest(unittest.TestCase):
+    def test_latest_results_use_the_current_snapshot_even_without_recording_it(self):
+        current = snapshot("b", {"Module": ["a", "b"], "Port": ["c"]}, [])
+        with tempfile.TemporaryDirectory() as directory:
+            archive = Path(directory)
+            page = render_history(archive, "verihogg/verihogg-format", current)
+            self.assertIn("2 unsupported constructs", page)
+            self.assertIn("History will appear after the first recorded run", page)
+
+            record(archive, snapshot("a", {"Module": ["a"]}, []), None)
+            page = render_history(archive, "verihogg/verihogg-format", current)
+            self.assertLess(page.index("Latest results"), page.index("Update formatter"))
+            self.assertIn("2 unsupported constructs", page)
+            self.assertEqual(page.count('href="unsupported.html"'), 1)
+
     def test_backfill_distinguishes_pre_diagnostics_and_missing_runs(self):
         early = snapshot("a", {}, [])
         missing = snapshot("b", {}, [])
@@ -68,4 +82,5 @@ class HistoryPageTest(unittest.TestCase):
             self.assertIn("1 tested commit with no confirmed support changes", page)
             self.assertIn("2 commits since the previous run", page)
             self.assertIn("Test configuration changed", page)
-            self.assertEqual(page.count("See full report"), 1)
+            self.assertIn("1 unsupported construct. ", page)
+            self.assertEqual(page.count('href="unsupported.html"'), 1)

@@ -36,17 +36,8 @@ def commit_link(run, repository):
 
 
 def render_history(archive, repository, current):
-    history = load_history(archive)
-    runs = timeline(history)
-    if not runs:
-        return "<p>History will appear after the first recorded run on main.</p>"
-
+    runs = timeline(load_history(archive))
     repository = "https://github.com/" + html.escape(repository, quote=True)
-    latest_report = next(
-        (i for i in range(len(runs) - 1, -1, -1)
-         if runs[i]["sha"] == current["sha"] and runs[i].get("config_id") == current["config_id"]),
-        None,
-    )
 
     def render_commit(run):
         date = html.escape(run["date"][:10])
@@ -62,8 +53,14 @@ def render_history(archive, repository, current):
             return "unchanged"
         return "entry"
 
-    entries = []
-    for kind, group in groupby(reversed(list(enumerate(runs))), lambda item: group_kind(item[1])):
+    count = len(current["constructs"])
+    noun = "construct" if count == 1 else "constructs"
+    entries = [
+        '<li class="latest-results"><h3>Latest results</h3>'
+        f'<p>{count} unsupported {noun}. '
+        '<a href="unsupported.html">View full report</a></p></li>'
+    ]
+    for kind, group in groupby(reversed(runs), group_kind):
         if kind != "entry":
             items = list(group)
             count = len(items)
@@ -74,10 +71,8 @@ def render_history(archive, repository, current):
                 "unchanged": f"{count} tested {noun} with no confirmed support changes",
             }[kind]
             lines = []
-            for index, run in items:
+            for run in items:
                 summary = render_commit(run)
-                if index == latest_report:
-                    summary += ' <a href="unsupported.html">See full report</a>'
                 if (run.get("commit_count") or 0) > 1:
                     summary += render_range(run, repository)
                 lines.append(f"<li>{summary}</li>")
@@ -87,8 +82,8 @@ def render_history(archive, repository, current):
             )
             continue
 
-        for index, run in group:
-            lines = [f"<h2>{render_commit(run)}</h2>"]
+        for run in group:
+            lines = [f"<h3>{render_commit(run)}</h3>"]
             if (run.get("commit_count") or 0) > 1:
                 lines.append(render_range(run, repository))
             if run["baseline"]:
@@ -96,10 +91,11 @@ def render_history(archive, repository, current):
                            if run["base_sha"] else "First recorded run.")
                 lines.append(f"<p>{message}</p>")
             lines.extend(render_changes(run))
-            if index == latest_report:
-                lines.append('<p><a href="unsupported.html">See full report</a></p>')
             entries.append(f"<li>{''.join(lines)}</li>")
-    return '<ol class="timeline">' + "\n".join(entries) + "</ol>"
+    page = '<ol class="timeline">' + "\n".join(entries) + "</ol>"
+    if not runs:
+        page += '<p class="history-empty">History will appear after the first recorded run on main.</p>'
+    return page
 
 
 def render_changes(run):

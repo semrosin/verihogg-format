@@ -96,7 +96,7 @@ header {
   border-bottom: 1px solid var(--line);
   background: linear-gradient(180deg, #131f3b, #0f172a);
 }
-header h1 { margin: 0 0 6px; font-size: 26px; }
+header h2 { margin: 0 0 6px; font-size: 26px; }
 header .meta { margin: 0; color: var(--muted); }
 main { padding: 24px 32px 48px; max-width: 1500px; margin: 0 auto; }
 .cards {
@@ -113,7 +113,7 @@ main { padding: 24px 32px 48px; max-width: 1500px; margin: 0 auto; }
 }
 .card .value { font-size: 26px; font-weight: 650; }
 .card .label { color: var(--muted); font-size: 12px; margin-top: 2px; }
-h2 { font-size: 18px; margin: 0 0 10px; }
+h3 { font-size: 18px; margin: 0 0 10px; }
 .lead { color: var(--muted); margin: 0 0 12px; }
 table {
   width: 100%;
@@ -362,7 +362,7 @@ def render_html(
                 errors, key=lambda item: relative_path(item["file"], root)
             )
         )
-        error_section = f"<section><h2>Skipped files</h2><ul>{items}</ul></section>"
+        error_section = f"<section><h3>Skipped files</h3><ul>{items}</ul></section>"
 
     cards = [
         (len(files) - len(errors) if site else len(files), "Files scanned"),
@@ -385,7 +385,7 @@ def render_html(
             project,
             f'<p class="meta">Generated {generated}</p>'
             f'<dl class="project-stats">{stats_html}</dl>'
-            '<section><h2>Constructs</h2>'
+            '<section><h3>Constructs</h3>'
             '<p class="lead">Locations show the first occurrence per file.</p>'
             f'<div class="table-scroll" tabindex="0" role="region" aria-label="Constructs table">{table}</div>'
             f'</section>{error_section}',
@@ -409,13 +409,13 @@ def render_html(
         f"<style>{CSS}</style>\n"
         "</head>\n<body>\n"
         "<header>"
-        f"<h1>{html.escape(project)}</h1>"
+        f"<h2>{html.escape(project)}</h2>"
         '<p class="meta">VerihoggFormat unsupported constructs · '
         f"generated {generated}</p>"
         "</header>\n<main>\n"
         f'<section class="cards">{card_html}</section>\n'
         "<section>"
-        "<h2>Constructs</h2>"
+        "<h3>Constructs</h3>"
         '<p class="lead">Grouped from the formatter end-of-run summary. '
         "Counts are occurrences; locations point to the first occurrence "
         "in each file.</p>"

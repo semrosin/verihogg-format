@@ -46,8 +46,9 @@ class Aggregate:
 class PageParser(HTMLParser):
     def __init__(self) -> None:
         super().__init__(convert_charrefs=True)
-        self.in_h1 = False
-        self.h1_parts: list[str] = []
+        self.in_header = False
+        self.title_tag = ""
+        self.title_parts: list[str] = []
         self.in_row = False
         self.in_cell = False
         self.cell_tag = ""
@@ -58,8 +59,10 @@ class PageParser(HTMLParser):
         self.labels: dict[str, str] = {}
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
-        if tag == "h1":
-            self.in_h1 = True
+        if tag == "header":
+            self.in_header = True
+        elif tag == "h1" or (tag == "h2" and self.in_header):
+            self.title_tag = tag
         elif tag == "tr":
             self.in_row = True
             self.row = []
@@ -72,8 +75,10 @@ class PageParser(HTMLParser):
             self.cell_parts.append(" ")
 
     def handle_endtag(self, tag: str) -> None:
-        if tag == "h1":
-            self.in_h1 = False
+        if tag == "header":
+            self.in_header = False
+        elif tag == self.title_tag:
+            self.title_tag = ""
         elif tag in {"td", "th"} and self.in_cell and tag == self.cell_tag:
             text = " ".join("".join(self.cell_parts).split())
             self.row.append((self.cell_tag, text))
@@ -88,14 +93,14 @@ class PageParser(HTMLParser):
             self.in_row = False
 
     def handle_data(self, data: str) -> None:
-        if self.in_h1:
-            self.h1_parts.append(data)
+        if self.title_tag:
+            self.title_parts.append(data)
         if self.in_cell:
             self.cell_parts.append(data)
 
     @property
     def project_name(self) -> str:
-        return " ".join("".join(self.h1_parts).split())
+        return " ".join("".join(self.title_parts).split())
 
 
 def die(message: str) -> None:
@@ -244,8 +249,8 @@ def render_html(
         return document(
             "Unsupported constructs in projects",
             f'<p class="meta">Generated {generated}</p>'
-            f'<section><h2>Projects scanned ({len(pages)})</h2>{projects}</section>'
-            '<section><h2>Constructs</h2>'
+            f'<section><h3>Projects scanned ({len(pages)})</h3>{projects}</section>'
+            '<section><h3>Constructs</h3>'
             '<p class="lead">Occurrences across the projects listed above.</p>'
             f'<div class="table-scroll" tabindex="0" role="region" aria-label="Constructs table">{table}</div>'
             '</section>',
@@ -259,13 +264,13 @@ def render_html(
         f"<style>{CSS}{INDEX_CSS}</style>\n"
         "</head>\n<body>\n"
         "<header>"
-        "<h1>VerihoggFormat unsupported constructs</h1>"
+        "<h2>VerihoggFormat unsupported constructs</h2>"
         '<p class="meta">'
         f"{len(pages)} projects · generated {generated}</p>"
         "</header>\n<main>\n"
-        "<section><h2>Projects</h2>"
+        "<section><h3>Projects</h3>"
         f"{projects}</section>\n"
-        "<section><h2>Constructs</h2>"
+        "<section><h3>Constructs</h3>"
         '<p class="lead">Aggregated by construct and error type. '
         "Counts are occurrences across all projects.</p>"
         f"{table}"
