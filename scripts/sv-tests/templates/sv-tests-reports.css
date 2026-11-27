@@ -1,5 +1,6 @@
 :root {
   color-scheme: light;
+  scrollbar-gutter: stable both-edges;
   --ink: #071735;
   --blue: #1234ff;
   --paper: #fbf8f6;
@@ -11,20 +12,12 @@
 }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--paper); color: var(--ink); font-family: Arial, Helvetica, sans-serif; }
-.page { width: min(100% - 9%, 1300px); margin: 0 auto; }
-header { padding: 44px 0 29px; border-bottom: 2px solid var(--ink); }
-.brand { margin: 0; font: 700 clamp(21px, 2.8vw, 39px)/1.1 var(--mono); letter-spacing: -.055em; }
-.brand span { color: var(--blue); }
-@media (max-width: 760px) {
-  .page { width: calc(100% - 40px); }
-  header { padding: 28px 0 22px; }
-}
 
-.report-header, .report-content {
+.report-header, .report-content, .history-content {
   width: min(calc(100% - var(--gutter) - var(--gutter)), 1300px);
   margin-inline: auto;
 }
-.report-header { padding: 0; border: 0; font: .9375rem/1.6 system-ui, sans-serif; }
+.report-header { font: .9375rem/1.6 system-ui, sans-serif; }
 .report-brand {
   margin: 0;
   padding: clamp(1.125rem, 3vw, 2.125rem) 0 clamp(.875rem, 2vw, 1.375rem);
@@ -42,7 +35,7 @@ header { padding: 44px 0 29px; border-bottom: 2px solid var(--ink); }
   letter-spacing: -.045em;
   overflow-wrap: anywhere;
 }
-.report-nav {
+.report-header .report-nav {
   display: flex;
   flex-wrap: wrap;
   gap: 0 clamp(.25rem, 2vw, 1.5rem);

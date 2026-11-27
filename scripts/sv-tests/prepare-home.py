@@ -13,7 +13,8 @@ def main():
     root = args.report
     index = root / 'index.html'
     table = root / 'report.html'
-    for path in (index, root / 'constructs.html', root / 'unsupported.html'):
+    construct_reports = (root / 'constructs.html', root / 'unsupported.html')
+    for path in (index, *construct_reports):
         if not path.is_file():
             parser.error(f'Missing report file: {path}')
     if table.exists():
@@ -24,9 +25,20 @@ def main():
     for asset in (template, stylesheet):
         if not asset.is_file():
             parser.error(f'Missing landing page asset: {asset}')
+
+    updated_reports = {}
+    stylesheet_link = f'<link rel="stylesheet" href="{stylesheet.name}">\n'
+    for path in construct_reports:
+        head, style, rest = path.read_text(encoding='utf-8').partition('<style>')
+        if not style:
+            parser.error(f'Missing inline stylesheet in {path}')
+        updated_reports[path] = head + stylesheet_link + style + rest
+
     index.rename(table)
     shutil.copyfile(template, index)
     shutil.copyfile(stylesheet, root / stylesheet.name)
+    for path, page in updated_reports.items():
+        path.write_text(page, encoding='utf-8')
 
 
 if __name__ == '__main__':
