@@ -18,11 +18,15 @@ def main():
             parser.error(f'Missing report file: {path}')
     if table.exists():
         parser.error(f'Refusing to overwrite existing file: {table}')
-    template = Path(__file__).resolve().parent / 'sv-tests-home.html'
-    if not template.is_file():
-        parser.error(f'Missing landing page template: {template}')
+    templates = Path(__file__).resolve().parent / 'templates'
+    template = templates / 'home.html'
+    stylesheet = templates / 'sv-tests-reports.css'
+    for asset in (template, stylesheet):
+        if not asset.is_file():
+            parser.error(f'Missing landing page asset: {asset}')
     index.rename(table)
     shutil.copyfile(template, index)
+    shutil.copyfile(stylesheet, root / stylesheet.name)
 
 
 if __name__ == '__main__':

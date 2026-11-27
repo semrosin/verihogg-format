@@ -5,18 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light">
   <title>verihogg / reports</title>
+  <link rel="stylesheet" href="sv-tests-reports.css">
   <style>
-    :root { color-scheme: light; --ink: #071735; --blue: #1234ff; --paper: #fbf8f6; }
-    * { box-sizing: border-box; }
-    body { margin: 0; background: var(--paper); color: var(--ink); font-family: Arial, Helvetica, sans-serif; }
-    .page { width: min(100% - 9%, 1300px); margin: 0 auto; }
-    header { padding: 44px 0 29px; border-bottom: 2px solid var(--ink); }
-    .brand { margin: 0; font: 700 clamp(21px, 2.8vw, 39px)/1.1 ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: -.055em; }
-    .brand span { color: var(--blue); }
-    main { padding: 75px 0 64px; }
+    .home-content { width: min(calc(100% - var(--gutter) - var(--gutter)), 1300px); margin-inline: auto; }
+    main { padding: clamp(1.25rem, 3vw, 2rem) 0 64px; }
     .intro { display: flex; justify-content: space-between; align-items: flex-start; gap: 44px; margin-bottom: 74px; }
     .intro-copy { max-width: 850px; }
-    h1 { margin: 0 0 23px; font-size: clamp(39px, 6.2vw, 85px); line-height: 1.02; letter-spacing: -.055em; }
     .intro p { margin: 0; font-size: clamp(17px, 2vw, 28px); line-height: 1.45; }
     .code { flex: none; margin: 9px 0 0; padding: 7px 0 7px 26px; border-left: 4px solid var(--blue); font: 22px/1.65 ui-monospace, SFMono-Regular, Consolas, monospace; }
     .code span { color: var(--blue); }
@@ -31,9 +25,7 @@
     .label span { display: block; font-size: clamp(16px, 1.65vw, 23px); line-height: 1.4; }
     .arrow { color: var(--blue); font-size: 46px; line-height: 1; text-align: right; }
     @media (max-width: 760px) {
-      .page { width: calc(100% - 40px); }
-      header { padding: 28px 0 22px; }
-      main { padding: 51px 0; }
+      main { padding-bottom: 51px; }
       .intro { margin-bottom: 40px; }
       .code { display: none; }
       .report-link { min-height: 129px; grid-template-columns: 53px minmax(0, 1fr) 28px; padding: 20px 17px; }
@@ -46,12 +38,19 @@
   </style>
 </head>
 <body>
-  <div class="page">
-    <header><p class="brand">verihogg <span>/ reports</span></p></header>
+  <header class="report-header">
+    <p class="report-brand"><a href="index.html">verihogg <span>/ reports</span></a></p>
+    <h1>Explore the reports</h1>
+    <nav class="report-nav" aria-label="Construct reports">
+      <a href="unsupported.html">Full report</a>
+      <a href="constructs.html">Warning constructs</a>
+      <a href="projects/index.html">In projects</a>
+    </nav>
+  </header>
+  <div class="home-content">
     <main>
       <div class="intro">
         <div class="intro-copy">
-          <h1>Explore the reports</h1>
           <p>SystemVerilog formatter test reports, including formatting test results and a list of unsupported language constructs.</p>
         </div>
         <pre class="code" aria-hidden="true">module top;
@@ -64,9 +63,9 @@ endmodule</pre>
           <span class="label"><strong>Test results</strong><span>View the formatter test results for SystemVerilog code.</span></span>
           <span class="arrow" aria-hidden="true">→</span>
         </a>
-        <a class="report-link" href="unsupported.html">
+        <a class="report-link" href="history.html">
           <span class="icon" aria-hidden="true"><svg viewBox="0 0 80 64"><path d="M18 16 5 30l13 14M41 16l13 14-13 14M32 10 23 50M53 39l14 14M67 39 53 53"/></svg></span>
-          <span class="label"><strong>Unsupported constructs</strong><span>Explore unsupported constructs, their causes, and affected tests.</span></span>
+          <span class="label"><strong>Unsupported constructs</strong><span>Track changes in support and see current unsupported constructs.</span></span>
           <span class="arrow" aria-hidden="true">→</span>
         </a>
       </nav>
