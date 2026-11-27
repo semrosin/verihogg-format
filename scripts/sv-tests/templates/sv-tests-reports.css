@@ -35,6 +35,14 @@ body { margin: 0; background: var(--paper); color: var(--ink); font-family: Aria
   letter-spacing: -.045em;
   overflow-wrap: anywhere;
 }
+.report-header h2 {
+  margin: clamp(1.125rem, 3vw, 1.875rem) 0 clamp(2.25rem, 1.75rem + 2vw, 3rem);
+  font-size: clamp(1.75rem, 1.15rem + 2.9vw, 3.5rem);
+  font-weight: 750;
+  line-height: 1.12;
+  letter-spacing: -.045em;
+  overflow-wrap: anywhere;
+}
 .report-header .report-nav {
   display: flex;
   flex-wrap: wrap;
@@ -68,7 +76,7 @@ body { margin: 0; background: var(--paper); color: var(--ink); font-family: Aria
   font: .9375rem/1.6 system-ui, sans-serif;
   overflow-wrap: anywhere;
 }
-.report-content h2 { margin: 0 0 .5rem; font-size: 1.25rem; }
+.report-content h3 { margin: 0 0 .5rem; font-size: 1.25rem; }
 .report-content section + section { margin-top: 2rem; }
 .report-content a { color: var(--blue); }
 .report-content a:focus-visible, .table-scroll:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }

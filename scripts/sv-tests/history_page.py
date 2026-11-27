@@ -88,7 +88,7 @@ def render_history(archive, repository, current):
             continue
 
         for index, run in group:
-            lines = [f"<h2>{render_commit(run)}</h2>"]
+            lines = [f"<h3>{render_commit(run)}</h3>"]
             if (run.get("commit_count") or 0) > 1:
                 lines.append(render_range(run, repository))
             if run["baseline"]:

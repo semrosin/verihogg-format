@@ -57,9 +57,12 @@ class ProjectsSiteTest(unittest.TestCase):
                 for page in ("unsupported.html", "constructs.html"):
                     (site / page).write_text(nav + f'<a href="{page}">Report</a></nav>',
                                              encoding="utf-8")
+                titles = {"scr1": ("h2", "SCR1 Core"), "ibex": ("h1", "Ibex Core")}
                 for project in projects:
+                    heading, title = titles[project]
                     (artifacts / f"unsupported-{project}.html").write_text(
-                        f"<h1>{project}</h1><table><tr>"
+                        f"<header><{heading}>{title}</{heading}></header>"
+                        "<h2>Constructs</h2><table><tr>"
                         '<td data-label="unsupported token kind AutomaticKeyword">'
                         "automatic AutomaticKeyword</td><td>Token</td>"
                         "<td>2</td><td>source.sv:1</td></tr></table>",
@@ -81,6 +84,8 @@ class ProjectsSiteTest(unittest.TestCase):
                 for project in ("scr1", "ibex"):
                     href = f'href="details/unsupported-{project}.html"'
                     self.assertEqual(href in index, project in projects)
+                    if project in projects:
+                        self.assertIn(f"{href}>{titles[project][1]}</a>", index)
                 if projects:
                     self.assertIn(f'<td class="num">{2 * len(projects)}</td>', index)
                     self.assertIn('<code>automatic</code> <span class="muted">AutomaticKeyword</span>', index)
