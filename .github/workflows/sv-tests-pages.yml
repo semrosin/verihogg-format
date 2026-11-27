@@ -129,7 +129,7 @@ jobs:
 
       - name: Update formatter support history
         env:
-          HISTORY_REMOTE: https://github.com/verihogg/sv-tests-results.git
+          HISTORY_REMOTE: https://github.com/${{ github.repository == 'verihogg/verihogg-format' && 'verihogg/sv-tests-results' || github.repository }}.git
           # Fine-grained token with Contents write on sv-tests-results.
           GH_TOKEN: ${{ github.repository == 'verihogg/verihogg-format' && github.ref == 'refs/heads/main' && secrets.REPORT_HISTORY_TOKEN || '' }}
         run: |

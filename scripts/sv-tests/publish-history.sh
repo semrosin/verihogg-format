@@ -25,7 +25,7 @@ if [[ -n "$remote" ]]; then
 fi
 
 args=(--archive "$archive" --report "$report" --snapshot "$snapshot"
-      --repository verihogg/verihogg-format)
+      --repository "${GITHUB_REPOSITORY:-${FORMATTER_REPOSITORY:-verihogg/verihogg-format}}")
 if [[ "${4:-}" == --publish ]]; then
   : "${remote:?Set HISTORY_REMOTE when publishing}"
   args+=(--record-from "$formatter")
