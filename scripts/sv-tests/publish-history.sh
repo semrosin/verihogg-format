@@ -5,7 +5,7 @@ formatter=${1:?Pass the formatter checkout}
 report=${2:?Pass the generated report directory}
 snapshot=${3:?Pass the current snapshot file}
 remote=${HISTORY_REMOTE:-}
-ref=refs/heads/formatter-history
+ref=${HISTORY_REF:-refs/heads/formatter-history}
 
 archive=$(mktemp -d)
 trap 'rm -rf -- "$archive"' EXIT
@@ -17,6 +17,10 @@ if [[ -n "$remote" ]]; then
     git -C "$archive" reset --quiet --hard FETCH_HEAD
   else
     status=$?
+    if [[ "$status" == 2 && -n "${HISTORY_REF:-}" ]]; then
+      printf 'History archive %s not found on %s\n' "$ref" "$remote" >&2
+      exit "$status"
+    fi
     # A new archive is expected to have no branch. Other errors must stop the build.
     if [[ "$status" != 2 ]]; then
       exit "$status"
