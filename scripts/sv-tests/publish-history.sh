@@ -5,7 +5,7 @@ formatter=${1:?Pass the formatter checkout}
 report=${2:?Pass the generated report directory}
 snapshot=${3:?Pass the current snapshot file}
 remote=${HISTORY_REMOTE:-}
-ref=${HISTORY_REF:-refs/heads/formatter-history}
+ref=refs/heads/formatter-history
 
 archive=$(mktemp -d)
 trap 'rm -rf -- "$archive"' EXIT
@@ -40,4 +40,9 @@ if [[ "${4:-}" == --publish ]]; then
       commit --quiet -m "Record formatter support for $(git -C "$formatter" rev-parse --short HEAD)"
     git -C "$archive" push "$remote" "HEAD:$ref"
   fi
+fi
+
+if [[ "${4:-}" == --check-write ]]; then
+  : "${remote:?Set HISTORY_REMOTE when checking write access}"
+  git -C "$archive" push --dry-run "$remote" "HEAD:$ref"
 fi

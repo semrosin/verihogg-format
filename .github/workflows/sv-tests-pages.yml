@@ -141,10 +141,7 @@ jobs:
             if [[ "$GITHUB_REPOSITORY" == 'verihogg/verihogg-format' ]]; then
               options+=(--publish)
             else
-              preview=$(mktemp -d)
-              trap 'rm -rf -- "$preview"' EXIT
-              HISTORY_REF=refs/heads/formatter-history-preview \
-                bash "$publisher" formatter "$preview" "$snapshot" --publish
+              options+=(--check-write)
             fi
           else
             echo "::warning::REPORT_HISTORY_TOKEN is missing. Publishing the existing support history without a new snapshot."
