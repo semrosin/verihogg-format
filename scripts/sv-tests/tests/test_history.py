@@ -45,6 +45,22 @@ class HistoryTest(unittest.TestCase):
         after["constructs"]["Module"] = ["new"]
         self.assertEqual(compare(before, after), ([], ["Port"]))
 
+    def test_accepts_checks_that_pass_with_other_known_warnings(self):
+        before = snapshot("a", {"Import": ["a"], "Static": ["b"], "Missing": ["c"]}, [])
+        tests = [
+            SimpleNamespace(logpath="a", status="warning", keys=["construct:Other"],
+                            logfile=True, unparsed=False),
+            SimpleNamespace(logpath="b", status="warning", keys=[],
+                            logfile=True, unparsed=True),
+            SimpleNamespace(logpath="c", status="failed", keys=[],
+                            logfile=True, unparsed=False),
+        ]
+        after = make_snapshot(tests, "b" * 40, "Update formatter",
+                              "2026-11-25T10:00:00Z", {"suite": "a"})
+
+        self.assertEqual(after["passed"], [])
+        self.assertEqual(compare(before, after), (["Import"], []))
+
     def test_records_once_per_commit_and_config(self):
         first = snapshot("a", {"Module": ["a"]}, [])
         second = snapshot("b", {}, ["a"])

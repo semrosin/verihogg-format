@@ -24,32 +24,38 @@ def config_id(config):
 def make_snapshot(tests, sha, subject, date, config):
     constructs = defaultdict(set)
     passed = set()
+    verified = set()
     for test in tests:
         for key in test.keys:
             category, _, name = key.partition(":")
             if category == "construct":
                 constructs[name].add(test.logpath)
-        # A remaining warning can leave the region containing another construct untouched.
-        if test.status == "passed" and test.logfile is not None and not test.unparsed:
-            passed.add(test.logpath)
+        if test.status in {"passed", "warning"} and test.logfile is not None and not test.unparsed:
+            # The runner verifies the syntax tree even when other warnings remain.
+            verified.add(test.logpath)
+            if test.status == "passed":
+                passed.add(test.logpath)
 
     return {
         "sha": sha, "subject": subject, "date": date,
         "config": config, "config_id": config_id(config),
         "constructs": {name: sorted(witnesses) for name, witnesses in constructs.items()},
-        "passed": sorted(passed),
+        "passed": sorted(passed), "verified": sorted(verified),
     }
 
 
 def compare(before, after):
-    def resolved(old, new):
-        passed = set(new["passed"])
+    def resolved(old, new, checked):
+        verified = set(checked)
         return sorted(
             name for name, witnesses in old["constructs"].items()
-            if name not in new["constructs"] and passed.issuperset(witnesses)
+            if name not in new["constructs"] and verified.issuperset(witnesses)
         )
 
-    return resolved(before, after), resolved(after, before)
+    return (
+        resolved(before, after, after.get("verified", after["passed"])),
+        resolved(after, before, before["passed"]),
+    )
 
 
 def snapshot_path(archive, run):
