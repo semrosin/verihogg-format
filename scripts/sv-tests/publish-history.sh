@@ -25,7 +25,7 @@ if [[ -n "$remote" ]]; then
 fi
 
 args=(--archive "$archive" --report "$report" --snapshot "$snapshot"
-      --repository "${GITHUB_REPOSITORY:-${FORMATTER_REPOSITORY:-verihogg/verihogg-format}}")
+      --repository verihogg/verihogg-format)
 if [[ "${4:-}" == --publish ]]; then
   : "${remote:?Set HISTORY_REMOTE when publishing}"
   args+=(--record-from "$formatter")
@@ -40,4 +40,9 @@ if [[ "${4:-}" == --publish ]]; then
       commit --quiet -m "Record formatter support for $(git -C "$formatter" rev-parse --short HEAD)"
     git -C "$archive" push "$remote" "HEAD:$ref"
   fi
+fi
+
+if [[ "${4:-}" == --check-write ]]; then
+  : "${remote:?Set HISTORY_REMOTE when checking write access}"
+  git -C "$archive" push --dry-run "$remote" "HEAD:$ref"
 fi
