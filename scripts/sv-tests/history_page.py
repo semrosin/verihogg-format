@@ -41,7 +41,7 @@ def render_history(archive, repository, current):
 
     def render_commit(run):
         date = html.escape(run["date"][:10])
-        return f'{commit_link(run, repository)} <time datetime="{date}">{date}</time>'
+        return f'<time datetime="{date}">{date}</time> {commit_link(run, repository)}'
 
     def group_kind(run):
         if run.get("before_diagnostics"):
@@ -55,11 +55,12 @@ def render_history(archive, repository, current):
 
     count = len(current["constructs"])
     noun = "construct" if count == 1 else "constructs"
-    entries = [
-        '<li class="latest-results"><h3>Latest results</h3>'
+    latest = (
+        '<section class="latest-results"><h3>Latest results</h3>'
         f'<p>{count} unsupported {noun}. '
-        '<a href="unsupported.html">View full report</a></p></li>'
-    ]
+        '<a href="unsupported.html">View full report</a></p></section>'
+    )
+    entries = []
     for kind, group in groupby(reversed(runs), group_kind):
         if kind != "entry":
             items = list(group)
@@ -76,42 +77,56 @@ def render_history(archive, repository, current):
                 if (run.get("commit_count") or 0) > 1:
                     summary += render_range(run, repository)
                 lines.append(f"<li>{summary}</li>")
+            group_class = "no-changes unchanged" if kind == "unchanged" else "no-changes"
             entries.append(
-                f'<li class="no-changes"><details><summary>{label}</summary>'
+                f'<li class="{group_class}"><details><summary>{label}</summary>'
                 f'<ul>{"".join(lines)}</ul></details></li>'
             )
             continue
 
         for run in group:
-            lines = [f"<h3>{render_commit(run)}</h3>"]
-            if (run.get("commit_count") or 0) > 1:
-                lines.append(render_range(run, repository))
+            changes = render_changes(run)
             if run["baseline"]:
                 message = ("Test configuration changed. Tracking starts again here."
                            if run["base_sha"] else "First recorded run.")
-                lines.append(f"<p>{message}</p>")
-            lines.extend(render_changes(run))
-            entries.append(f"<li>{''.join(lines)}</li>")
-    page = '<ol class="timeline">' + "\n".join(entries) + "</ol>"
-    if not runs:
-        page += '<p class="history-empty">History will appear after the first recorded run on main.</p>'
-    return page
+                changes.insert(0, f'<p class="baseline">{message}</p>')
+            commit = f'<h3>{render_commit(run)}</h3>'
+            if (run.get("commit_count") or 0) > 1:
+                commit += render_range(run, repository)
+            entries.append(
+                f'<li class="history-entry"><div class="commit-meta">{commit}</div>'
+                f'<div class="entry-changes">{"".join(changes)}</div></li>'
+            )
+    if entries:
+        entries.insert(0, f'<li class="history-latest">{latest}</li>')
+        return '<ol class="timeline" role="list">' + "\n".join(entries) + "</ol>"
+    return latest + '<p class="history-empty">History will appear after the first recorded run on main.</p>'
 
 
 def render_changes(run):
     lines = []
-    for key, label, noun in (
-        ("added", "newly supported {}", "construct"),
-        ("lost", "regressed {}", "construct"),
-        ("diagnostics_removed", "{} no longer observed", "diagnostic"),
-        ("diagnostics_added", "new {}", "diagnostic"),
+    for key, label, marker in (
+        ("added", "newly supported", "+"),
+        ("lost", "regressed", "−"),
+    ):
+        names = run[key]
+        if names:
+            noun = "construct" if len(names) == 1 else "constructs"
+            items = "".join(
+                f'<li><span aria-hidden="true">{marker}</span><code>{html.escape(name)}</code></li>'
+                for name in names
+            )
+            lines.append(f'<ul class="support-change support-{key}" role="list" '
+                         f'aria-label="{len(names)} {label} {noun}">{items}</ul>')
+    for key, label in (
+        ("diagnostics_removed", "{} no longer observed"),
+        ("diagnostics_added", "new {}"),
     ):
         names = run.get(key)
         if names:
-            title = label.format(noun if len(names) == 1 else noun + "s")
+            title = label.format("diagnostic" if len(names) == 1 else "diagnostics")
             items = "".join(f"<li>{html.escape(name)}</li>" for name in names)
-            details = '<details class="diagnostic-change">' if noun == "diagnostic" else "<details>"
-            lines.append(f"{details}<summary>{len(names)} {title}</summary>"
+            lines.append(f'<details class="diagnostic-change"><summary>{len(names)} {title}</summary>'
                          f"<ul>{items}</ul></details>")
     return lines
 
