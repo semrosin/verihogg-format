@@ -79,6 +79,12 @@ class HistoryPageTest(unittest.TestCase):
             self.assertEqual(len(list((archive / "snapshots").glob("*/*.json"))), 4)
             self.assertIn("Support &lt;Module&gt;", page)
             self.assertIn("1 newly supported construct", page)
+            self.assertRegex(
+                page,
+                r'<h3>.*Support &lt;Module&gt;.*</h3>.*'
+                r'<ul class="support-change support-added" role="list" aria-label="1 newly supported construct">'
+                r'<li><span aria-hidden="true">\+</span><code>Module</code></li></ul>',
+            )
             self.assertIn("1 tested commit with no confirmed support changes", page)
             self.assertIn("2 commits since the previous run", page)
             self.assertIn("Test configuration changed", page)
