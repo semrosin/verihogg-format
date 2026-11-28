@@ -84,10 +84,11 @@ jobs:
       - name: Checkout sv-tests
         uses: actions/checkout@v6
         with:
-          repository: verihogg/sv-tests
-          # Replace with the merged runner-fix commit from develop before merge.
-          ref: eabb1204f2a3a23f51d0400a472e5d568a30b468
+          # Demo only: combines verihogg/sv-tests PRs #2 and #3.
+          repository: semrosin/sv-tests
+          ref: 03f4e39017719e80e10f75fca407cc75e78a5911
           path: sv-tests
+          persist-credentials: false
 
       - name: Download report generators
         env:
